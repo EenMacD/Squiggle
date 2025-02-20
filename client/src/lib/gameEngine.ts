@@ -166,6 +166,8 @@ export class GameEngine {
   }
 
   public selectPlayer(x: number, y: number) {
+    if (this.state.isDragging) return; // Don't select while dragging
+
     const clickedPlayer = this.state.players.find(p => {
       const dx = p.position.x - x;
       const dy = p.position.y - y;
@@ -199,12 +201,16 @@ export class GameEngine {
     if (this.state.selectedPlayer && !this.state.isPlaying && this.state.isDragging) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
+        // Keep player within field bounds
+        const boundedX = Math.max(50, Math.min(this.canvas.width - 50, x));
+        const boundedY = Math.max(50, Math.min(this.canvas.height - 50, y));
+
         // Update position
-        player.position = { x, y };
+        player.position = { x: boundedX, y: boundedY };
 
         // Record trail if recording is active
         if (this.state.isRecording) {
-          player.trail.push({ x, y });
+          player.trail.push({ x: boundedX, y: boundedY });
         }
 
         this.render();

@@ -8,16 +8,25 @@ export function Canvas() {
 
   useEffect(() => {
     if (canvasRef.current) {
-      engineRef.current = new GameEngine(canvasRef.current);
+      const canvas = canvasRef.current;
+      // Set canvas size with correct aspect ratio
+      const aspectRatio = 4/3;
+      canvas.width = 800;
+      canvas.height = canvas.width / aspectRatio;
+
+      engineRef.current = new GameEngine(canvas);
     }
   }, []);
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!engineRef.current) return;
+    if (!engineRef.current || !canvasRef.current) return;
 
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = canvasRef.current.width / rect.width;
+    const scaleY = canvasRef.current.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     engineRef.current.startDragging(x, y);
   };
@@ -28,38 +37,46 @@ export function Canvas() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!engineRef.current) return;
+    if (!engineRef.current || !canvasRef.current) return;
 
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = canvasRef.current.width / rect.width;
+    const scaleY = canvasRef.current.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     engineRef.current.selectPlayer(x, y);
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!engineRef.current || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = canvasRef.current.width / rect.width;
+    const scaleY = canvasRef.current.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    engineRef.current.updatePlayerPosition(x, y);
+  };
+
+  const handleMouseLeave = () => {
     if (!engineRef.current) return;
-
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (e.buttons === 1) { // Left mouse button is being held down
-      engineRef.current.updatePlayerPosition(x, y);
-    }
+    engineRef.current.stopDragging();
   };
 
   return (
     <div className="flex flex-col gap-4">
       <canvas
         ref={canvasRef}
-        width={800}
-        height={600}
         className="w-full border border-border rounded-lg bg-black"
         onClick={handleCanvasClick}
         onMouseDown={handleCanvasMouseDown}
         onMouseUp={handleCanvasMouseUp}
         onMouseMove={handleCanvasMouseMove}
+        onMouseLeave={handleMouseLeave}
       />
       <Controls gameEngine={engineRef.current} />
     </div>
