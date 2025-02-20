@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { Controls } from "./Controls";
 
 export function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<GameEngine | null>(null);
+  const [gameEngine, setGameEngine] = useState<GameEngine | null>(null);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -14,12 +14,13 @@ export function Canvas() {
       canvas.width = 800;
       canvas.height = canvas.width / aspectRatio;
 
-      engineRef.current = new GameEngine(canvas);
+      const engine = new GameEngine(canvas);
+      setGameEngine(engine);
     }
   }, []);
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!engineRef.current || !canvasRef.current) return;
+    if (!gameEngine || !canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
     const scaleX = canvasRef.current.width / rect.width;
@@ -28,16 +29,16 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    engineRef.current.startDragging(x, y);
+    gameEngine.startDragging(x, y);
   };
 
   const handleCanvasMouseUp = () => {
-    if (!engineRef.current) return;
-    engineRef.current.stopDragging();
+    if (!gameEngine) return;
+    gameEngine.stopDragging();
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!engineRef.current || !canvasRef.current) return;
+    if (!gameEngine || !canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
     const scaleX = canvasRef.current.width / rect.width;
@@ -46,11 +47,11 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    engineRef.current.selectPlayer(x, y);
+    gameEngine.selectPlayer(x, y);
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!engineRef.current || !canvasRef.current) return;
+    if (!gameEngine || !canvasRef.current) return;
 
     const rect = canvasRef.current.getBoundingClientRect();
     const scaleX = canvasRef.current.width / rect.width;
@@ -59,12 +60,12 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    engineRef.current.updatePlayerPosition(x, y);
+    gameEngine.updatePlayerPosition(x, y);
   };
 
   const handleMouseLeave = () => {
-    if (!engineRef.current) return;
-    engineRef.current.stopDragging();
+    if (!gameEngine) return;
+    gameEngine.stopDragging();
   };
 
   return (
@@ -78,7 +79,7 @@ export function Canvas() {
         onMouseMove={handleCanvasMouseMove}
         onMouseLeave={handleMouseLeave}
       />
-      <Controls gameEngine={engineRef.current} />
+      {gameEngine && <Controls gameEngine={gameEngine} />}
     </div>
   );
 }
