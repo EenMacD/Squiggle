@@ -40,13 +40,13 @@ export class GameEngine {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
 
-    // Initialize with ball at center field, larger size and contrasting color.
+    // Initialize with ball possessed by a red team player
     const initialBallState: BallState = {
       position: {
-        x: canvas.width / 2,
+        x: canvas.width * 0.25, // Red team's side
         y: canvas.height / 2
       },
-      possessionPlayerId: null
+      possessionPlayerId: 'team1-2' // Start with middle red player
     };
 
     this.state = {
@@ -94,7 +94,7 @@ export class GameEngine {
 
   public startDragging(x: number, y: number) {
     // Check if we're clicking on the ball first
-    const ballRadius = 20; // Increased ball radius for easier clicking
+    const ballRadius = 20;
     const dx = this.state.ball.position.x - x;
     const dy = this.state.ball.position.y - y;
     const distanceToBall = Math.sqrt(dx * dx + dy * dy);
@@ -113,6 +113,12 @@ export class GameEngine {
     if (clickedPlayer) {
       this.state.selectedPlayer = clickedPlayer.id;
       this.isDragging = true;
+
+      // If clicked player has the ball, allow ball dragging
+      if (clickedPlayer.id === this.state.ball.possessionPlayerId) {
+        this.state.isDraggingBall = true;
+      }
+
       this.render();
     }
   }
@@ -141,7 +147,7 @@ export class GameEngine {
 
   public stopDragging() {
     if (this.state.isDraggingBall) {
-      // Check if ball was dropped on a player
+      // Check if ball was dropped near a player
       const receivingPlayer = this.findNearestPlayer(
         this.state.ball.position.x,
         this.state.ball.position.y
@@ -156,7 +162,7 @@ export class GameEngine {
           this.recordKeyFrame();
         }
       } else {
-        // Return ball to previous position if no valid receiver
+        // Return ball to previous possessing player
         const possessingPlayer = this.state.players.find(
           p => p.id === this.state.ball.possessionPlayerId
         );
@@ -327,8 +333,8 @@ export class GameEngine {
 
     // Draw ball
     this.ctx.beginPath();
-    this.ctx.arc(this.state.ball.position.x, this.state.ball.position.y, 20, 0, Math.PI * 2); // Increased ball size
-    this.ctx.fillStyle = 'yellow'; // Contrasting color
+    this.ctx.arc(this.state.ball.position.x, this.state.ball.position.y, 20, 0, Math.PI * 2);
+    this.ctx.fillStyle = 'yellow';
     this.ctx.fill();
     this.ctx.strokeStyle = '#cccccc';
     this.ctx.lineWidth = 1;
