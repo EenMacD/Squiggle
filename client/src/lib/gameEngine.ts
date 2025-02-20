@@ -29,8 +29,9 @@ export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private state: GameState;
-  private socket: WebSocket;
+  private socket: WebSocket | null = null; // Initialize socket as null
   private ballPosition: Position | null = null;
+  private isDraggingPlayer: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -45,8 +46,8 @@ export class GameEngine {
     };
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//localhost:5001/ws`;
-    this.socket = new WebSocket(wsUrl);
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    this.setupWebSocket(); //Call setupWebSocket here
 
     // Initialize ball with the middle player of team 1
     const initialCarrier = this.state.players.find(p => p.team === 1 && p.hasBall);
@@ -54,7 +55,6 @@ export class GameEngine {
       this.ballPosition = { ...initialCarrier.position };
     }
 
-    this.setupWebSocket();
     this.render();
   }
 
@@ -91,43 +91,75 @@ export class GameEngine {
     return players;
   }
 
-  public startDraggingBall(x: number, y: number) {
-    const ballCarrier = this.state.players.find(p => p.hasBall);
-    if (ballCarrier && this.ballPosition) {
+  public startDragging(x: number, y: number) {
+    // First check if we're clicking on the ball
+    if (this.ballPosition) {
       const dx = this.ballPosition.x - x;
       const dy = this.ballPosition.y - y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // Make it easier to grab the ball by increasing the grab radius
       if (distance < 30) {
-        this.state.isDraggingBall = true;
-        ballCarrier.hasBall = false;
+        const ballCarrier = this.state.players.find(p => p.hasBall);
+        if (ballCarrier) {
+          ballCarrier.hasBall = false;
+          this.state.isDraggingBall = true;
+          this.render();
+          return;
+        }
+      }
+    }
+
+    // If not clicking the ball, check for player selection
+    const clickedPlayer = this.findNearestPlayer(x, y);
+    if (clickedPlayer) {
+      this.state.selectedPlayer = clickedPlayer.id;
+      this.isDraggingPlayer = true;
+      this.render();
+    }
+  }
+
+  public updateDragPosition(x: number, y: number) {
+    if (this.state.isDraggingBall) {
+      this.ballPosition = { x, y };
+      this.render();
+    } else if (this.isDraggingPlayer && this.state.selectedPlayer) {
+      const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
+      if (player) {
+        player.position = { x, y };
+        if (player.hasBall && this.ballPosition) {
+          this.ballPosition = { x: player.position.x + 10, y: player.position.y - 10 };
+        }
         this.render();
       }
     }
   }
 
-  public updateBallPosition(x: number, y: number) {
+  public stopDragging(x: number, y: number) {
     if (this.state.isDraggingBall) {
-      this.ballPosition = { x, y };
-      this.render();
-    }
-  }
-
-  public stopDraggingBall(x: number, y: number) {
-    if (this.state.isDraggingBall && this.ballPosition) {
       const nearestPlayer = this.findNearestPlayer(x, y);
       if (nearestPlayer) {
         nearestPlayer.hasBall = true;
-        this.ballPosition = { ...nearestPlayer.position };
+        this.ballPosition = {
+          x: nearestPlayer.position.x + 10,
+          y: nearestPlayer.position.y - 10
+        };
 
         if (this.state.isRecording) {
           this.recordKeyFrame(nearestPlayer.id);
         }
       }
       this.state.isDraggingBall = false;
-      this.render();
     }
+
+    this.isDraggingPlayer = false;
+    if (this.state.isRecording) {
+      const ballCarrier = this.state.players.find(p => p.hasBall);
+      if (ballCarrier) {
+        this.recordKeyFrame(ballCarrier.id);
+      }
+    }
+
+    this.render();
   }
 
   private findNearestPlayer(x: number, y: number): Player | null {
@@ -139,7 +171,6 @@ export class GameEngine {
       const dy = player.position.y - y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // Increase the snap radius to make it easier to pass to players
       if (distance < minDistance && distance < 50) {
         minDistance = distance;
         nearest = player;
@@ -219,10 +250,40 @@ export class GameEngine {
   }
 
   private setupWebSocket() {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    console.log('Connecting to WebSocket:', wsUrl);
+
+    if (this.socket) {
+      this.socket.close();
+    }
+
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      // Attempt to reconnect after a delay
+      setTimeout(() => this.setupWebSocket(), 5000);
+    };
+
+    this.socket.onclose = () => {
+      console.log('WebSocket connection closed');
+      // Attempt to reconnect after a delay
+      setTimeout(() => this.setupWebSocket(), 5000);
+    };
+
     this.socket.onmessage = (event) => {
-      const update = JSON.parse(event.data);
-      this.state = { ...this.state, ...update };
-      this.render();
+      try {
+        const update = JSON.parse(event.data);
+        this.state = { ...this.state, ...update };
+        this.render();
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
     };
   }
 
@@ -261,7 +322,10 @@ export class GameEngine {
       if (firstFrame.ballCarrier) {
         const carrier = this.state.players.find(p => p.id === firstFrame.ballCarrier);
         if (carrier) {
-          this.ballPosition = { ...carrier.position };
+          this.ballPosition = {
+            x: carrier.position.x + 10,
+            y: carrier.position.y - 10
+          };
         }
       }
     }
@@ -289,7 +353,10 @@ export class GameEngine {
           player.position = position;
           player.hasBall = playerId === frame.ballCarrier;
           if (player.hasBall) {
-            this.ballPosition = { ...position };
+            this.ballPosition = {
+              x: position.x + 10,
+              y: position.y - 10
+            };
           }
         }
       });
@@ -304,17 +371,15 @@ export class GameEngine {
     requestAnimationFrame(animate);
   }
 
-  public getLastBallPosition(): Position {
-    return this.ballPosition || { x: 0, y: 0 };
-  }
-
   private updateBallVisualization() {
-    const ballCarrier = this.state.players.find(p => p.hasBall);
-    if (ballCarrier) {
-      this.ballPosition = {
-        x: ballCarrier.position.x + 10, // Offset the ball slightly from the player
-        y: ballCarrier.position.y - 10
-      };
+    if (!this.state.isDraggingBall) {
+      const ballCarrier = this.state.players.find(p => p.hasBall);
+      if (ballCarrier) {
+        this.ballPosition = {
+          x: ballCarrier.position.x + 10,
+          y: ballCarrier.position.y - 10
+        };
+      }
     }
   }
 }

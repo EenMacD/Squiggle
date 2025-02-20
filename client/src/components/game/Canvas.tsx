@@ -28,7 +28,7 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    gameEngine.startDraggingBall(x, y);
+    gameEngine.startDragging(x, y);
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -41,7 +41,7 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    gameEngine.updateBallPosition(x, y);
+    gameEngine.updateDragPosition(x, y);
   };
 
   const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -54,22 +54,20 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    gameEngine.stopDraggingBall(x, y);
+    gameEngine.stopDragging(x, y);
   };
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!gameEngine || !canvasRef.current) return;
 
-    // Instead of using getLastBallPosition, just stop dragging at current position
     const rect = canvasRef.current.getBoundingClientRect();
     const scaleX = canvasRef.current.width / rect.width;
     const scaleY = canvasRef.current.height / rect.height;
 
-    // Get current mouse position
-    const x = (event?.clientX || 0 - rect.left) * scaleX;
-    const y = (event?.clientY || 0 - rect.top) * scaleY;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
-    gameEngine.stopDraggingBall(x, y);
+    gameEngine.stopDragging(x, y);
   };
 
   return (

@@ -36,30 +36,51 @@ app.use((req, res, next) => {
   next();
 });
 
+// Function to handle graceful shutdown
+function gracefulShutdown(server: any) {
+  return () => {
+    log('Received shutdown signal. Closing server...');
+    server.close(() => {
+      log('Server closed. Exiting process.');
+      process.exit(0);
+    });
+  };
+}
+
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      log(`Error: ${status} - ${message}`);
+      res.status(status).json({ message });
+    });
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    if (app.get("env") === "development") {
+      log('Setting up Vite middleware...');
+      await setupVite(app, server);
+      log('Vite middleware setup complete');
+    } else {
+      log('Setting up static file serving...');
+      serveStatic(app);
+    }
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Use PORT from environment or fallback to 5001
+    const PORT = process.env.PORT || 5001;
+    log(`Attempting to start server on port ${PORT}...`);
+
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server listening on port ${PORT}`);
+    });
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', gracefulShutdown(server));
+    process.on('SIGINT', gracefulShutdown(server));
+
+  } catch (error) {
+    log(`Failed to start server: ${error}`);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
 })();
