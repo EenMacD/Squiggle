@@ -124,12 +124,6 @@ export class GameEngine {
   }
 
   public updateDragPosition(x: number, y: number) {
-    if (this.state.isDraggingBall) {
-      this.state.ball.position = { x, y };
-      this.render();
-      return;
-    }
-
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
@@ -332,8 +326,18 @@ export class GameEngine {
     });
 
     // Draw ball
+    const possessingPlayer = this.state.players.find(p => p.id === this.state.ball.possessionPlayerId);
+    let ballX = this.state.ball.position.x;
+    let ballY = this.state.ball.position.y;
+
+    if (possessingPlayer) {
+      ballX = possessingPlayer.position.x;
+      ballY = possessingPlayer.position.y;
+    }
+
+
     this.ctx.beginPath();
-    this.ctx.arc(this.state.ball.position.x, this.state.ball.position.y, 20, 0, Math.PI * 2);
+    this.ctx.arc(ballX, ballY, 20, 0, Math.PI * 2);
     this.ctx.fillStyle = 'yellow';
     this.ctx.fill();
     this.ctx.strokeStyle = '#cccccc';
