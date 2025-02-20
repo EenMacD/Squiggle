@@ -108,6 +108,7 @@ export class GameEngine {
         // Only allow dragging the ball if it's in possession
         if (this.state.ball.possessionPlayerId !== null) {
           this.state.isDraggingBall = true;
+          this.state.selectedPlayer = null; // Deselect player when ball is selected
           this.render();
           return;
         }
