@@ -22,9 +22,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPlay(insertPlay: InsertPlay): Promise<Play> {
+    // Validate and transform keyframes before insertion
+    const transformedPlay = {
+      ...insertPlay,
+      keyframes: insertPlay.keyframes || []
+    };
+
     const [play] = await db
       .insert(plays)
-      .values([insertPlay])
+      .values(transformedPlay)
       .returning();
     return play;
   }
