@@ -54,6 +54,7 @@ export function Controls({ gameEngine }: ControlsProps) {
 
     try {
       const movements = gameEngine.getRecordedMovements();
+      console.log('Saving movements:', movements); // Debug log
 
       if (Object.keys(movements.team1).length === 0 && Object.keys(movements.team2).length === 0) {
         toast({
@@ -64,11 +65,20 @@ export function Controls({ gameEngine }: ControlsProps) {
         return;
       }
 
-      await apiRequest("POST", "/api/plays", {
+      const playData = {
         name: playName,
         category: "default",
-        movements
-      });
+        movements: {
+          team1: movements.team1,
+          team2: movements.team2
+        }
+      };
+
+      console.log('Sending play data:', playData); // Debug log
+
+      const response = await apiRequest("POST", "/api/plays", playData);
+      const result = await response.json();
+      console.log('Save response:', result); // Debug log
 
       await queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
 
@@ -81,9 +91,10 @@ export function Controls({ gameEngine }: ControlsProps) {
       setPlayName("");
       setIsRecording(false);
     } catch (error) {
+      console.error('Save error:', error); // Debug log
       toast({
         title: "Error saving play",
-        description: "Failed to save the play. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to save the play. Please try again.",
         variant: "destructive"
       });
     }

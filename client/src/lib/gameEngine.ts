@@ -288,16 +288,23 @@ export class GameEngine {
     this.state.isPlaying = false;
   }
 
+  // Update the getRecordedMovements method to ensure proper data structure
   public getRecordedMovements() {
     const team1Movements: Record<string, Position[]> = {};
     const team2Movements: Record<string, Position[]> = {};
 
     this.state.players.forEach(player => {
       if (player.trail.length > 0) {
+        const movements = player.trail.map(pos => ({
+          x: pos.x,
+          y: pos.y,
+          timestamp: pos.timestamp || Date.now()
+        }));
+
         if (player.team === 1) {
-          team1Movements[player.id] = player.trail;
+          team1Movements[player.id] = movements;
         } else {
-          team2Movements[player.id] = player.trail;
+          team2Movements[player.id] = movements;
         }
       }
     });
