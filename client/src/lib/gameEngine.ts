@@ -95,16 +95,22 @@ export class GameEngine {
   public startDragging(x: number, y: number) {
     // Check if we're clicking on the ball first
     const ballRadius = 20;
-    const dx = this.state.ball.position.x - x;
-    const dy = this.state.ball.position.y - y;
-    const distanceToBall = Math.sqrt(dx * dx + dy * dy);
+    const possessingPlayer = this.state.players.find(p => p.id === this.state.ball.possessionPlayerId);
+    if (possessingPlayer) {
+      const offset = 25;
+      const ballX = possessingPlayer.position.x + offset;
+      const ballY = possessingPlayer.position.y - offset;
+      const dx = ballX - x;
+      const dy = ballY - y;
+      const distanceToBall = Math.sqrt(dx * dx + dy * dy);
 
-    if (distanceToBall < ballRadius) {
-      // Only allow dragging the ball if it's in possession
-      if (this.state.ball.possessionPlayerId !== null) {
-        this.state.isDraggingBall = true;
-        this.render();
-        return;
+      if (distanceToBall < ballRadius) {
+        // Only allow dragging the ball if it's in possession
+        if (this.state.ball.possessionPlayerId !== null) {
+          this.state.isDraggingBall = true;
+          this.render();
+          return;
+        }
       }
     }
 
@@ -113,25 +119,30 @@ export class GameEngine {
     if (clickedPlayer) {
       this.state.selectedPlayer = clickedPlayer.id;
       this.isDragging = true;
-
-      // If clicked player has the ball, allow ball dragging
-      if (clickedPlayer.id === this.state.ball.possessionPlayerId) {
-        this.state.isDraggingBall = true;
-      }
-
       this.render();
     }
   }
 
   public updateDragPosition(x: number, y: number) {
+    if (this.state.isDraggingBall) {
+      // When dragging the ball, update its position
+      this.state.ball.position = { x, y };
+      this.render();
+      return;
+    }
+
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         player.position = { x, y };
 
-        // Update ball position if player has possession
+        // If this player has the ball, update ball position too
         if (this.state.ball.possessionPlayerId === player.id) {
-          this.state.ball.position = { x, y };
+          const offset = 25;
+          this.state.ball.position = {
+            x: player.position.x + offset,
+            y: player.position.y - offset
+          };
         }
 
         this.render();
@@ -331,10 +342,11 @@ export class GameEngine {
     let ballY = this.state.ball.position.y;
 
     if (possessingPlayer) {
-      ballX = possessingPlayer.position.x;
-      ballY = possessingPlayer.position.y;
+      // Offset the ball slightly from the player
+      const offset = 25; // Distance from player center
+      ballX = possessingPlayer.position.x + offset;
+      ballY = possessingPlayer.position.y - offset;
     }
-
 
     this.ctx.beginPath();
     this.ctx.arc(ballX, ballY, 20, 0, Math.PI * 2);
