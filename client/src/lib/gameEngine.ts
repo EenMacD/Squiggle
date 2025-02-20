@@ -269,4 +269,24 @@ export class GameEngine {
   public stopPlayback() {
     this.state.isPlaying = false;
   }
+
+  public getRecordedMovements() {
+    const team1Movements: Record<string, Position[]> = {};
+    const team2Movements: Record<string, Position[]> = {};
+
+    this.state.players.forEach(player => {
+      if (player.trail.length > 0) {
+        if (player.team === 1) {
+          team1Movements[player.id] = player.trail;
+        } else {
+          team2Movements[player.id] = player.trail;
+        }
+      }
+    });
+
+    return {
+      team1: team1Movements,
+      team2: team2Movements
+    };
+  }
 }
