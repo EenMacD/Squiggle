@@ -8,11 +8,11 @@ export interface Player {
   team: 1 | 2;
   position: Position;
   trail: Position[];
+  hasBall: boolean;
 }
 
 export interface GameState {
   players: Player[];
-  ball: Position;
   selectedPlayer: string | null;
   isRecording: boolean;
   isPlaying: boolean;
@@ -29,7 +29,6 @@ export class GameEngine {
     this.ctx = canvas.getContext('2d')!;
     this.state = {
       players: this.initializePlayers(),
-      ball: { x: this.canvas.width / 2, y: this.canvas.height / 2 },
       selectedPlayer: null,
       isRecording: false,
       isPlaying: false
@@ -45,30 +44,35 @@ export class GameEngine {
 
   private initializePlayers(): Player[] {
     const players: Player[] = [];
-    const positions = [
-      { x: 200, y: 200 }, { x: 300, y: 200 }, { x: 400, y: 200 },
-      { x: 200, y: 400 }, { x: 300, y: 400 }, { x: 400, y: 400 }
-    ];
+    const spacing = this.canvas.height / 7;
 
-    // Team 1
-    positions.forEach((pos, i) => {
+    // Team 1 (Left side)
+    for (let i = 0; i < 6; i++) {
       players.push({
         id: `team1-${i}`,
         team: 1,
-        position: { ...pos },
-        trail: []
+        position: { 
+          x: this.canvas.width * 0.25,
+          y: spacing + (i * spacing)
+        },
+        trail: [],
+        hasBall: i === 2 // Middle player starts with the ball
       });
-    });
+    }
 
-    // Team 2
-    positions.forEach((pos, i) => {
+    // Team 2 (Right side)
+    for (let i = 0; i < 6; i++) {
       players.push({
         id: `team2-${i}`,
         team: 2,
-        position: { x: this.canvas.width - pos.x, y: pos.y },
-        trail: []
+        position: { 
+          x: this.canvas.width * 0.75,
+          y: spacing + (i * spacing)
+        },
+        trail: [],
+        hasBall: false
       });
-    });
+    }
 
     return players;
   }
@@ -85,17 +89,21 @@ export class GameEngine {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawField();
     this.drawPlayers();
-    this.drawBall();
   }
 
   private drawField() {
-    this.ctx.fillStyle = '#3a8c3a';
+    // Black background
+    this.ctx.fillStyle = '#000000';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Draw field lines
+
+    // Field lines
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
+
+    // Border
     this.ctx.strokeRect(50, 50, this.canvas.width - 100, this.canvas.height - 100);
+
+    // Center line
     this.ctx.beginPath();
     this.ctx.moveTo(this.canvas.width / 2, 50);
     this.ctx.lineTo(this.canvas.width / 2, this.canvas.height - 50);
@@ -120,7 +128,15 @@ export class GameEngine {
       this.ctx.arc(player.position.x, player.position.y, 15, 0, Math.PI * 2);
       this.ctx.fillStyle = player.team === 1 ? 'red' : 'blue';
       this.ctx.fill();
-      
+
+      // Draw ball if player has it
+      if (player.hasBall) {
+        this.ctx.beginPath();
+        this.ctx.arc(player.position.x, player.position.y, 5, 0, Math.PI * 2);
+        this.ctx.fillStyle = 'white';
+        this.ctx.fill();
+      }
+
       if (player.id === this.state.selectedPlayer) {
         this.ctx.strokeStyle = 'yellow';
         this.ctx.lineWidth = 3;
@@ -129,22 +145,21 @@ export class GameEngine {
     });
   }
 
-  private drawBall() {
-    this.ctx.beginPath();
-    this.ctx.arc(this.state.ball.x, this.state.ball.y, 8, 0, Math.PI * 2);
-    this.ctx.fillStyle = 'white';
-    this.ctx.fill();
-  }
-
   public selectPlayer(x: number, y: number) {
-    const player = this.state.players.find(p => {
+    const clickedPlayer = this.state.players.find(p => {
       const dx = p.position.x - x;
       const dy = p.position.y - y;
       return Math.sqrt(dx * dx + dy * dy) < 15;
     });
-    
-    if (player) {
-      this.state.selectedPlayer = player.id;
+
+    if (clickedPlayer) {
+      const currentPlayer = this.state.players.find(p => p.id === this.state.selectedPlayer);
+      if (currentPlayer?.hasBall && clickedPlayer.team === currentPlayer.team) {
+        // Pass the ball
+        currentPlayer.hasBall = false;
+        clickedPlayer.hasBall = true;
+      }
+      this.state.selectedPlayer = clickedPlayer.id;
       this.render();
     }
   }
@@ -167,10 +182,5 @@ export class GameEngine {
         this.render();
       }
     }
-  }
-
-  public moveBall(x: number, y: number) {
-    this.state.ball = { x, y };
-    this.render();
   }
 }
