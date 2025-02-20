@@ -161,7 +161,11 @@ export class GameEngine {
       if (receivingPlayer && receivingPlayer.id !== this.state.ball.possessionPlayerId) {
         // Transfer possession
         this.state.ball.possessionPlayerId = receivingPlayer.id;
-        this.state.ball.position = { ...receivingPlayer.position };
+        const offset = 25;
+        this.state.ball.position = {
+          x: receivingPlayer.position.x + offset,
+          y: receivingPlayer.position.y - offset
+        };
 
         if (this.state.isRecording) {
           this.recordKeyFrame();
@@ -172,7 +176,25 @@ export class GameEngine {
           p => p.id === this.state.ball.possessionPlayerId
         );
         if (possessingPlayer) {
-          this.state.ball.position = { ...possessingPlayer.position };
+          const offset = 25;
+          this.state.ball.position = {
+            x: possessingPlayer.position.x + offset,
+            y: possessingPlayer.position.y - offset
+          };
+        } else {
+          // If no possessing player found, find nearest player
+          const nearestPlayer = this.findNearestPlayer(
+            this.state.ball.position.x,
+            this.state.ball.position.y
+          );
+          if (nearestPlayer) {
+            this.state.ball.possessionPlayerId = nearestPlayer.id;
+            const offset = 25;
+            this.state.ball.position = {
+              x: nearestPlayer.position.x + offset,
+              y: nearestPlayer.position.y - offset
+            };
+          }
         }
       }
 
