@@ -25,6 +25,7 @@ export interface GameState {
   }>;
   ball: BallState;
   isDraggingBall: boolean;
+  isBallSelected: boolean; // Add new state property
 }
 
 export class GameEngine {
@@ -43,10 +44,10 @@ export class GameEngine {
     // Initialize with ball possessed by a red team player
     const initialBallState: BallState = {
       position: {
-        x: canvas.width * 0.25, // Red team's side
+        x: canvas.width * 0.25,
         y: canvas.height / 2
       },
-      possessionPlayerId: 'team1-2' // Start with middle red player
+      possessionPlayerId: 'team1-2'
     };
 
     this.state = {
@@ -55,7 +56,8 @@ export class GameEngine {
       isRecording: false,
       keyFrames: [],
       ball: initialBallState,
-      isDraggingBall: false
+      isDraggingBall: false,
+      isBallSelected: false // Initialize new state
     };
 
     this.render();
@@ -105,20 +107,19 @@ export class GameEngine {
       const distanceToBall = Math.sqrt(dx * dx + dy * dy);
 
       if (distanceToBall < ballRadius) {
-        // Only allow dragging the ball if it's in possession
-        if (this.state.ball.possessionPlayerId !== null) {
-          this.state.isDraggingBall = true;
-          this.state.selectedPlayer = null; // Deselect player when ball is selected
-          this.render();
-          return;
-        }
+        this.state.isBallSelected = true;
+        this.state.isDraggingBall = true;
+        this.state.selectedPlayer = null; // Deselect player when ball is selected
+        this.render();
+        return;
       }
     }
 
-    // If not dragging ball, check for player selection
+    // If not clicking on ball, try to select a player
     const clickedPlayer = this.findNearestPlayer(x, y);
     if (clickedPlayer) {
       this.state.selectedPlayer = clickedPlayer.id;
+      this.state.isBallSelected = false; // Deselect ball when player is selected
       this.isDragging = true;
       this.render();
     }
@@ -200,6 +201,7 @@ export class GameEngine {
       }
 
       this.state.isDraggingBall = false;
+      this.state.isBallSelected = false;
     }
 
     if (this.isDragging && this.state.isRecording) {
@@ -375,8 +377,16 @@ export class GameEngine {
     this.ctx.arc(ballX, ballY, 20, 0, Math.PI * 2);
     this.ctx.fillStyle = 'yellow';
     this.ctx.fill();
-    this.ctx.strokeStyle = '#cccccc';
-    this.ctx.lineWidth = 1;
-    this.ctx.stroke();
+
+    // Add white outline when ball is selected
+    if (this.state.isBallSelected) {
+      this.ctx.strokeStyle = 'white';
+      this.ctx.lineWidth = 3;
+      this.ctx.stroke();
+    } else {
+      this.ctx.strokeStyle = '#cccccc';
+      this.ctx.lineWidth = 1;
+      this.ctx.stroke();
+    }
   }
 }
