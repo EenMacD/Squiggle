@@ -1,19 +1,27 @@
+import { useState } from "react";
 import { Canvas } from "@/components/game/Canvas";
-import { Controls } from "@/components/game/Controls";
 import { PlayLibrary } from "@/components/game/PlayLibrary";
+import { PlaybackView } from "@/components/game/PlaybackView";
+import type { Play } from "@shared/schema";
 
 export default function Home() {
+  const [selectedPlay, setSelectedPlay] = useState<Play | null>(null);
+
   return (
     <div className="min-h-screen bg-background flex">
       <div className="w-64 border-r border-border p-4">
-        <PlayLibrary />
+        <PlayLibrary onPlaySelect={setSelectedPlay} />
       </div>
       <div className="flex-1 flex flex-col">
         <div className="flex-1 p-4">
-          <Canvas />
-        </div>
-        <div className="border-t border-border p-4">
-          <Controls />
+          {selectedPlay ? (
+            <PlaybackView 
+              play={selectedPlay} 
+              onClose={() => setSelectedPlay(null)} 
+            />
+          ) : (
+            <Canvas />
+          )}
         </div>
       </div>
     </div>

@@ -3,7 +3,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import type { Play } from "@shared/schema";
 
-export function PlayLibrary() {
+interface PlayLibraryProps {
+  onPlaySelect: (play: Play) => void;
+}
+
+export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
   const { data: plays } = useQuery<Play[]>({
     queryKey: ["/api/plays"],
   });
@@ -18,6 +22,7 @@ export function PlayLibrary() {
               key={play.id}
               variant="ghost"
               className="w-full justify-start text-left"
+              onClick={() => onPlaySelect(play)}
             >
               {play.name}
             </Button>

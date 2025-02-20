@@ -11,6 +11,13 @@ export interface Player {
   hasBall: boolean;
 }
 
+interface Play {
+  movements: {
+    team1: { [playerId: string]: Position[] };
+    team2: { [playerId: string]: Position[] };
+  };
+}
+
 export interface GameState {
   players: Player[];
   selectedPlayer: string | null;
@@ -53,7 +60,7 @@ export class GameEngine {
       players.push({
         id: `team1-${i}`,
         team: 1,
-        position: { 
+        position: {
           x: this.canvas.width * 0.25,
           y: spacing + (i * spacing)
         },
@@ -67,7 +74,7 @@ export class GameEngine {
       players.push({
         id: `team2-${i}`,
         team: 2,
-        position: { 
+        position: {
           x: this.canvas.width * 0.75,
           y: spacing + (i * spacing)
         },
@@ -216,5 +223,50 @@ export class GameEngine {
         this.render();
       }
     }
+  }
+
+  public loadPlay(play: Play) {
+    this.state.players.forEach((player, index) => {
+      const teamKey = player.team === 1 ? 'team1' : 'team2';
+      const playerMovements = play.movements[teamKey][player.id] || [];
+      player.trail = playerMovements;
+    });
+    this.render();
+  }
+
+  public startPlayback() {
+    if (this.state.isPlaying) return;
+
+    this.state.isPlaying = true;
+    let frame = 0;
+
+    const animate = () => {
+      if (!this.state.isPlaying) return;
+
+      // Update player positions based on their trails
+      this.state.players.forEach(player => {
+        if (player.trail.length > frame) {
+          player.position = player.trail[frame];
+        }
+      });
+
+      this.render();
+      frame++;
+
+      // Check if any player still has frames to play
+      const hasMoreFrames = this.state.players.some(p => p.trail.length > frame);
+      if (hasMoreFrames) {
+        requestAnimationFrame(animate);
+      } else {
+        this.state.isPlaying = false;
+        frame = 0;
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  public stopPlayback() {
+    this.state.isPlaying = false;
   }
 }
