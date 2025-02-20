@@ -1,4 +1,6 @@
 import { plays, type Play, type InsertPlay } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getPlays(): Promise<Play[]>;
@@ -7,35 +9,31 @@ export interface IStorage {
   deletePlay(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private plays: Map<number, Play>;
-  private currentId: number;
-
-  constructor() {
-    this.plays = new Map();
-    this.currentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getPlays(): Promise<Play[]> {
-    return Array.from(this.plays.values());
+    return await db.select().from(plays);
   }
 
   async getPlaysByCategory(category: string): Promise<Play[]> {
-    return Array.from(this.plays.values()).filter(
-      (play) => play.category === category
-    );
+    return await db
+      .select()
+      .from(plays)
+      .where(eq(plays.category, category));
   }
 
   async createPlay(insertPlay: InsertPlay): Promise<Play> {
-    const id = this.currentId++;
-    const play = { ...insertPlay, id };
-    this.plays.set(id, play);
+    const [play] = await db
+      .insert(plays)
+      .values([insertPlay])
+      .returning();
     return play;
   }
 
   async deletePlay(id: number): Promise<void> {
-    this.plays.delete(id);
+    await db
+      .delete(plays)
+      .where(eq(plays.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

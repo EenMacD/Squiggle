@@ -13,8 +13,8 @@ export const plays = pgTable("plays", {
   name: text("name").notNull(),
   category: text("category").notNull(),
   movements: jsonb("movements").notNull().$type<{
-    team1: Record<string, playerMovement[]>,
-    team2: Record<string, playerMovement[]>
+    team1: Record<string, z.infer<typeof playerMovement>[]>,
+    team2: Record<string, z.infer<typeof playerMovement>[]>
   }>(),
 });
 
