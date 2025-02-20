@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { Controls } from "./Controls";
+import { useToast } from "@/hooks/use-toast";
 
 export function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameEngine, setGameEngine] = useState<GameEngine | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -17,6 +19,24 @@ export function Canvas() {
       setGameEngine(engine);
     }
   }, []);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!gameEngine) return;
+
+      if (e.code === 'Space' && gameEngine.isRecording()) {
+        e.preventDefault(); // Prevent page scroll
+        gameEngine.takeSnapshot();
+        toast({
+          title: "Snapshot taken",
+          description: "Player positions have been recorded"
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [gameEngine, toast]);
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!gameEngine || !canvasRef.current) return;

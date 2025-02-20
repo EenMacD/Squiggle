@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlayCircle, StopCircle, Camera } from "lucide-react";
+import { PlayCircle, StopCircle } from "lucide-react";
 import { useState } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +35,7 @@ export function Controls({ gameEngine }: ControlsProps) {
     if (newRecordingState) {
       toast({
         title: "Recording started",
-        description: "Position players and take snapshots to record the sequence"
+        description: "Position players and press SPACE to take snapshots"
       });
     } else {
       if (gameEngine.getRecordedKeyFrames().length > 0) {
@@ -50,23 +50,6 @@ export function Controls({ gameEngine }: ControlsProps) {
         gameEngine.toggleRecording(); // Resume recording
       }
     }
-  };
-
-  const handleTakeSnapshot = () => {
-    if (!gameEngine || !isRecording) {
-      toast({
-        title: "Error",
-        description: "Start recording first before taking snapshots",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    gameEngine.takeSnapshot();
-    toast({
-      title: "Snapshot taken",
-      description: "Player positions have been recorded"
-    });
   };
 
   const handleSavePlay = async () => {
@@ -85,7 +68,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       if (keyframes.length === 0) {
         toast({
           title: "Error",
-          description: "No snapshots recorded. Take at least one snapshot first.",
+          description: "No snapshots recorded. Press SPACE to take at least one snapshot.",
           variant: "destructive"
         });
         return;
@@ -140,17 +123,6 @@ export function Controls({ gameEngine }: ControlsProps) {
             </>
           )}
         </Button>
-
-        {isRecording && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleTakeSnapshot}
-          >
-            <Camera className="h-4 w-4 mr-2" />
-            Take Snapshot
-          </Button>
-        )}
       </div>
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>

@@ -404,4 +404,7 @@ export class GameEngine {
       this.ctx.stroke();
     }
   }
+  public isRecording(): boolean {
+    return this.state.isRecording;
+  }
 }
