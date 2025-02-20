@@ -8,10 +8,17 @@ export const position = z.object({
   y: z.number()
 });
 
-// Keyframe schema for storing player positions at a specific time
+// Ball state schema
+export const ballState = z.object({
+  position: position,
+  possessionPlayerId: z.string().nullable()
+});
+
+// Keyframe schema for storing player positions and ball state at a specific time
 export const keyFrame = z.object({
   timestamp: z.number(),
-  positions: z.record(z.string(), position)
+  positions: z.record(z.string(), position),
+  ball: ballState
 });
 
 // Database table for storing rugby plays
@@ -28,3 +35,5 @@ export const insertPlaySchema = createInsertSchema(plays);
 // Types for TypeScript
 export type InsertPlay = z.infer<typeof insertPlaySchema>;
 export type Play = typeof plays.$inferSelect;
+export type BallState = z.infer<typeof ballState>;
+export type KeyFrame = z.infer<typeof keyFrame>;

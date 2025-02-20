@@ -37,7 +37,7 @@ export function Controls({ gameEngine }: ControlsProps) {
     } else {
       toast({
         title: "Recording started",
-        description: "Move players to record their positions"
+        description: "Move players and pass the ball to record the sequence"
       });
     }
   };
@@ -59,7 +59,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       if (keyframes.length === 0) {
         toast({
           title: "Error",
-          description: "No movements recorded. Try moving players first.",
+          description: "No movements recorded. Try moving players and passing the ball first.",
           variant: "destructive"
         });
         return;

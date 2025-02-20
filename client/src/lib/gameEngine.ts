@@ -9,6 +9,11 @@ export interface Player {
   position: Position;
 }
 
+export interface BallState {
+  position: Position;
+  possessionPlayerId: string | null;
+}
+
 export interface GameState {
   players: Player[];
   selectedPlayer: string | null;
@@ -16,7 +21,10 @@ export interface GameState {
   keyFrames: Array<{
     timestamp: number;
     positions: Record<string, Position>;
+    ball: BallState;
   }>;
+  ball: BallState;
+  isDraggingBall: boolean;
 }
 
 export class GameEngine {
@@ -31,11 +39,23 @@ export class GameEngine {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
+    
+    // Initialize with ball at center field
+    const initialBallState: BallState = {
+      position: {
+        x: canvas.width / 2,
+        y: canvas.height / 2
+      },
+      possessionPlayerId: null
+    };
+
     this.state = {
       players: this.initializePlayers(),
       selectedPlayer: null,
       isRecording: false,
-      keyFrames: []
+      keyFrames: [],
+      ball: initialBallState,
+      isDraggingBall: false
     };
 
     this.render();
@@ -73,6 +93,22 @@ export class GameEngine {
   }
 
   public startDragging(x: number, y: number) {
+    // Check if we're clicking on the ball first
+    const ballRadius = 10;
+    const dx = this.state.ball.position.x - x;
+    const dy = this.state.ball.position.y - y;
+    const distanceToBall = Math.sqrt(dx * dx + dy * dy);
+
+    if (distanceToBall < ballRadius) {
+      // Only allow dragging the ball if it's in possession
+      if (this.state.ball.possessionPlayerId !== null) {
+        this.state.isDraggingBall = true;
+        this.render();
+        return;
+      }
+    }
+
+    // If not dragging ball, check for player selection
     const clickedPlayer = this.findNearestPlayer(x, y);
     if (clickedPlayer) {
       this.state.selectedPlayer = clickedPlayer.id;
@@ -82,16 +118,56 @@ export class GameEngine {
   }
 
   public updateDragPosition(x: number, y: number) {
+    if (this.state.isDraggingBall) {
+      this.state.ball.position = { x, y };
+      this.render();
+      return;
+    }
+
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         player.position = { x, y };
+        
+        // Update ball position if player has possession
+        if (this.state.ball.possessionPlayerId === player.id) {
+          this.state.ball.position = { x, y };
+        }
+        
         this.render();
       }
     }
   }
 
   public stopDragging() {
+    if (this.state.isDraggingBall) {
+      // Check if ball was dropped on a player
+      const receivingPlayer = this.findNearestPlayer(
+        this.state.ball.position.x,
+        this.state.ball.position.y
+      );
+
+      if (receivingPlayer && receivingPlayer.id !== this.state.ball.possessionPlayerId) {
+        // Transfer possession
+        this.state.ball.possessionPlayerId = receivingPlayer.id;
+        this.state.ball.position = { ...receivingPlayer.position };
+        
+        if (this.state.isRecording) {
+          this.recordKeyFrame();
+        }
+      } else {
+        // Return ball to previous position if no valid receiver
+        const possessingPlayer = this.state.players.find(
+          p => p.id === this.state.ball.possessionPlayerId
+        );
+        if (possessingPlayer) {
+          this.state.ball.position = { ...possessingPlayer.position };
+        }
+      }
+      
+      this.state.isDraggingBall = false;
+    }
+
     if (this.isDragging && this.state.isRecording) {
       this.recordKeyFrame();
     }
@@ -136,7 +212,8 @@ export class GameEngine {
 
     this.state.keyFrames.push({
       timestamp: Date.now(),
-      positions
+      positions,
+      ball: { ...this.state.ball }
     });
   }
 
@@ -144,7 +221,7 @@ export class GameEngine {
     return this.state.keyFrames;
   }
 
-  public loadPlay(play: { keyframes: Array<{ timestamp: number; positions: Record<string, Position> }> }) {
+  public loadPlay(play: { keyframes: Array<{ timestamp: number; positions: Record<string, Position>; ball: BallState }> }) {
     this.state.keyFrames = play.keyframes;
     this.currentKeyFrameIndex = 0;
     if (this.state.keyFrames.length > 0) {
@@ -156,6 +233,7 @@ export class GameEngine {
           player.position = position;
         }
       });
+      this.state.ball = { ...firstFrame.ball };
     }
     this.render();
   }
@@ -172,6 +250,7 @@ export class GameEngine {
             player.position = position;
           }
         });
+        this.state.ball = { ...frame.ball };
         this.currentKeyFrameIndex++;
         this.render();
         this.animationFrameId = requestAnimationFrame(animate);
@@ -201,6 +280,7 @@ export class GameEngine {
           player.position = position;
         }
       });
+      this.state.ball = { ...firstFrame.ball };
       this.render();
     }
   }
@@ -236,6 +316,22 @@ export class GameEngine {
         this.ctx.lineWidth = 3;
         this.ctx.stroke();
       }
+
+      // Highlight player with ball possession
+      if (player.id === this.state.ball.possessionPlayerId) {
+        this.ctx.strokeStyle = 'white';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+      }
     });
+
+    // Draw ball
+    this.ctx.beginPath();
+    this.ctx.arc(this.state.ball.position.x, this.state.ball.position.y, 10, 0, Math.PI * 2);
+    this.ctx.fillStyle = 'white';
+    this.ctx.fill();
+    this.ctx.strokeStyle = '#cccccc';
+    this.ctx.lineWidth = 1;
+    this.ctx.stroke();
   }
 }

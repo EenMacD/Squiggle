@@ -26,8 +26,9 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
     }
 
     return () => {
-      // Cleanup animation frame if needed
-      setIsPlaying(false);
+      if (isPlaying) {
+        engineRef.current?.pausePlayback();
+      }
     };
   }, [play]);
 
