@@ -12,6 +12,21 @@ export function Canvas() {
     }
   }, []);
 
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!engineRef.current) return;
+
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    engineRef.current.startDragging(x, y);
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (!engineRef.current) return;
+    engineRef.current.stopDragging();
+  };
+
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!engineRef.current) return;
 
@@ -23,13 +38,15 @@ export function Canvas() {
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!engineRef.current || e.buttons !== 1) return; // Only update when dragging (left mouse button)
+    if (!engineRef.current) return;
 
     const rect = canvasRef.current!.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    engineRef.current.updatePlayerPosition(x, y);
+    if (e.buttons === 1) { // Left mouse button is being held down
+      engineRef.current.updatePlayerPosition(x, y);
+    }
   };
 
   return (
@@ -40,6 +57,8 @@ export function Canvas() {
         height={600}
         className="w-full border border-border rounded-lg bg-black"
         onClick={handleCanvasClick}
+        onMouseDown={handleCanvasMouseDown}
+        onMouseUp={handleCanvasMouseUp}
         onMouseMove={handleCanvasMouseMove}
       />
       <Controls gameEngine={engineRef.current} />

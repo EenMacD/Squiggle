@@ -16,6 +16,7 @@ export interface GameState {
   selectedPlayer: string | null;
   isRecording: boolean;
   isPlaying: boolean;
+  isDragging: boolean;
 }
 
 export class GameEngine {
@@ -31,7 +32,8 @@ export class GameEngine {
       players: this.initializePlayers(),
       selectedPlayer: null,
       isRecording: false,
-      isPlaying: false
+      isPlaying: false,
+      isDragging: false
     };
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -145,6 +147,24 @@ export class GameEngine {
     });
   }
 
+  public startDragging(x: number, y: number) {
+    const clickedPlayer = this.state.players.find(p => {
+      const dx = p.position.x - x;
+      const dy = p.position.y - y;
+      return Math.sqrt(dx * dx + dy * dy) < 15;
+    });
+
+    if (clickedPlayer) {
+      this.state.selectedPlayer = clickedPlayer.id;
+      this.state.isDragging = true;
+      this.render();
+    }
+  }
+
+  public stopDragging() {
+    this.state.isDragging = false;
+  }
+
   public selectPlayer(x: number, y: number) {
     const clickedPlayer = this.state.players.find(p => {
       const dx = p.position.x - x;
@@ -153,11 +173,13 @@ export class GameEngine {
     });
 
     if (clickedPlayer) {
-      const currentPlayer = this.state.players.find(p => p.id === this.state.selectedPlayer);
-      if (currentPlayer?.hasBall && clickedPlayer.team === currentPlayer.team) {
-        // Pass the ball
-        currentPlayer.hasBall = false;
-        clickedPlayer.hasBall = true;
+      if (this.state.selectedPlayer) {
+        const currentPlayer = this.state.players.find(p => p.id === this.state.selectedPlayer);
+        if (currentPlayer?.hasBall && clickedPlayer.team === currentPlayer.team) {
+          // Pass the ball
+          currentPlayer.hasBall = false;
+          clickedPlayer.hasBall = true;
+        }
       }
       this.state.selectedPlayer = clickedPlayer.id;
       this.render();
@@ -167,18 +189,24 @@ export class GameEngine {
   public toggleRecording() {
     this.state.isRecording = !this.state.isRecording;
     if (this.state.isRecording) {
+      // Clear all trails when starting a new recording
       this.state.players.forEach(p => p.trail = []);
     }
+    this.render();
   }
 
   public updatePlayerPosition(x: number, y: number) {
-    if (this.state.selectedPlayer && !this.state.isPlaying) {
+    if (this.state.selectedPlayer && !this.state.isPlaying && this.state.isDragging) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
+        // Update position
         player.position = { x, y };
+
+        // Record trail if recording is active
         if (this.state.isRecording) {
           player.trail.push({ x, y });
         }
+
         this.render();
       }
     }
