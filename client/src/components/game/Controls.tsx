@@ -105,7 +105,7 @@ export function Controls({ gameEngine }: ControlsProps) {
 
   return (
     <>
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-4 items-center bg-background/80 backdrop-blur-sm rounded-lg p-2 shadow-lg">
         <Button 
           variant={isRecording ? "destructive" : "outline"}
           size="sm"

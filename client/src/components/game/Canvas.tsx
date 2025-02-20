@@ -75,7 +75,7 @@ export function Canvas() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 relative">
       <canvas
         ref={canvasRef}
         className="w-full border border-border rounded-lg bg-black"
@@ -84,7 +84,9 @@ export function Canvas() {
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleMouseLeave}
       />
-      {gameEngine && <Controls gameEngine={gameEngine} />}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+        {gameEngine && <Controls gameEngine={gameEngine} />}
+      </div>
     </div>
   );
 }

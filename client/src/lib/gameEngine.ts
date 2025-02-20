@@ -65,28 +65,28 @@ export class GameEngine {
 
   private initializePlayers(): Player[] {
     const players: Player[] = [];
-    const spacing = this.canvas.height / 7;
+    const spacing = this.canvas.width / 7;
 
-    // Team 1 (Left side)
+    // Team 1 (Red, Bottom side)
     for (let i = 0; i < 6; i++) {
       players.push({
         id: `team1-${i}`,
         team: 1,
         position: {
-          x: this.canvas.width * 0.25,
-          y: spacing + (i * spacing)
+          x: spacing + (i * spacing),
+          y: this.canvas.height * 0.75
         }
       });
     }
 
-    // Team 2 (Right side)
+    // Team 2 (Blue, Top side)
     for (let i = 0; i < 6; i++) {
       players.push({
         id: `team2-${i}`,
         team: 2,
         position: {
-          x: this.canvas.width * 0.75,
-          y: spacing + (i * spacing)
+          x: spacing + (i * spacing),
+          y: this.canvas.height * 0.25
         }
       });
     }
@@ -351,8 +351,8 @@ export class GameEngine {
 
     // Center line
     this.ctx.beginPath();
-    this.ctx.moveTo(this.canvas.width / 2, 50);
-    this.ctx.lineTo(this.canvas.width / 2, this.canvas.height - 50);
+    this.ctx.moveTo(50, this.canvas.height / 2);
+    this.ctx.lineTo(this.canvas.width - 50, this.canvas.height / 2);
     this.ctx.stroke();
 
     // Draw players
