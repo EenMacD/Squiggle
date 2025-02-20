@@ -5,7 +5,6 @@ export interface Position {
 
 export interface KeyFrame {
   timestamp: number;
-  ballCarrier: string;
   positions: Record<string, Position>;
 }
 
@@ -13,7 +12,6 @@ export interface Player {
   id: string;
   team: 1 | 2;
   position: Position;
-  hasBall: boolean;
 }
 
 export interface GameState {
@@ -21,7 +19,6 @@ export interface GameState {
   selectedPlayer: string | null;
   isRecording: boolean;
   isPlaying: boolean;
-  isDraggingBall: boolean;
   keyFrames: KeyFrame[];
 }
 
@@ -29,8 +26,7 @@ export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private state: GameState;
-  private socket: WebSocket | null = null; // Initialize socket as null
-  private ballPosition: Position | null = null;
+  private socket: WebSocket | null = null;
   private isDraggingPlayer: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -41,20 +37,12 @@ export class GameEngine {
       selectedPlayer: null,
       isRecording: false,
       isPlaying: false,
-      isDraggingBall: false,
       keyFrames: []
     };
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
-    this.setupWebSocket(); //Call setupWebSocket here
-
-    // Initialize ball with the middle player of team 1
-    const initialCarrier = this.state.players.find(p => p.team === 1 && p.hasBall);
-    if (initialCarrier) {
-      this.ballPosition = { ...initialCarrier.position };
-    }
-
+    this.setupWebSocket();
     this.render();
   }
 
@@ -70,8 +58,7 @@ export class GameEngine {
         position: {
           x: this.canvas.width * 0.25,
           y: spacing + (i * spacing)
-        },
-        hasBall: i === 2 // Middle player starts with the ball
+        }
       });
     }
 
@@ -83,8 +70,7 @@ export class GameEngine {
         position: {
           x: this.canvas.width * 0.75,
           y: spacing + (i * spacing)
-        },
-        hasBall: false
+        }
       });
     }
 
@@ -92,24 +78,6 @@ export class GameEngine {
   }
 
   public startDragging(x: number, y: number) {
-    // First check if we're clicking on the ball
-    if (this.ballPosition) {
-      const dx = this.ballPosition.x - x;
-      const dy = this.ballPosition.y - y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < 30) {
-        const ballCarrier = this.state.players.find(p => p.hasBall);
-        if (ballCarrier) {
-          ballCarrier.hasBall = false;
-          this.state.isDraggingBall = true;
-          this.render();
-          return;
-        }
-      }
-    }
-
-    // If not clicking the ball, check for player selection
     const clickedPlayer = this.findNearestPlayer(x, y);
     if (clickedPlayer) {
       this.state.selectedPlayer = clickedPlayer.id;
@@ -119,46 +87,20 @@ export class GameEngine {
   }
 
   public updateDragPosition(x: number, y: number) {
-    if (this.state.isDraggingBall) {
-      this.ballPosition = { x, y };
-      this.render();
-    } else if (this.isDraggingPlayer && this.state.selectedPlayer) {
+    if (this.isDraggingPlayer && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         player.position = { x, y };
-        if (player.hasBall && this.ballPosition) {
-          this.ballPosition = { x: player.position.x + 10, y: player.position.y - 10 };
-        }
         this.render();
       }
     }
   }
 
-  public stopDragging(x: number, y: number) {
-    if (this.state.isDraggingBall) {
-      const nearestPlayer = this.findNearestPlayer(x, y);
-      if (nearestPlayer) {
-        nearestPlayer.hasBall = true;
-        this.ballPosition = {
-          x: nearestPlayer.position.x + 10,
-          y: nearestPlayer.position.y - 10
-        };
-
-        if (this.state.isRecording) {
-          this.recordKeyFrame(nearestPlayer.id);
-        }
-      }
-      this.state.isDraggingBall = false;
-    }
-
+  public stopDragging() {
     this.isDraggingPlayer = false;
     if (this.state.isRecording) {
-      const ballCarrier = this.state.players.find(p => p.hasBall);
-      if (ballCarrier) {
-        this.recordKeyFrame(ballCarrier.id);
-      }
+      this.recordKeyFrame();
     }
-
     this.render();
   }
 
@@ -180,7 +122,7 @@ export class GameEngine {
     return nearest;
   }
 
-  private recordKeyFrame(ballCarrierId: string) {
+  private recordKeyFrame() {
     const positions: Record<string, Position> = {};
     this.state.players.forEach(player => {
       positions[player.id] = { ...player.position };
@@ -188,7 +130,6 @@ export class GameEngine {
 
     const keyFrame: KeyFrame = {
       timestamp: Date.now(),
-      ballCarrier: ballCarrierId,
       positions
     };
 
@@ -199,8 +140,6 @@ export class GameEngine {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawField();
     this.drawPlayers();
-    this.updateBallVisualization();
-    this.drawBall();
   }
 
   private drawField() {
@@ -237,18 +176,6 @@ export class GameEngine {
     });
   }
 
-  private drawBall() {
-    if (this.ballPosition) {
-      this.ctx.beginPath();
-      this.ctx.arc(this.ballPosition.x, this.ballPosition.y, 8, 0, Math.PI * 2);
-      this.ctx.fillStyle = 'white';
-      this.ctx.fill();
-      this.ctx.strokeStyle = 'black';
-      this.ctx.lineWidth = 2;
-      this.ctx.stroke();
-    }
-  }
-
   private setupWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -266,13 +193,11 @@ export class GameEngine {
 
     this.socket.onerror = (error) => {
       console.error('WebSocket error:', error);
-      // Attempt to reconnect after a delay
       setTimeout(() => this.setupWebSocket(), 5000);
     };
 
     this.socket.onclose = () => {
       console.log('WebSocket connection closed');
-      // Attempt to reconnect after a delay
       setTimeout(() => this.setupWebSocket(), 5000);
     };
 
@@ -292,11 +217,7 @@ export class GameEngine {
 
     if (this.state.isRecording) {
       this.state.keyFrames = [];
-      // Record initial positions
-      const ballCarrier = this.state.players.find(p => p.hasBall);
-      if (ballCarrier) {
-        this.recordKeyFrame(ballCarrier.id);
-      }
+      this.recordKeyFrame();
     }
 
     return this.state.isRecording;
@@ -306,28 +227,16 @@ export class GameEngine {
     return this.state.keyFrames;
   }
 
-  public loadPlay(play: { keyFrames: KeyFrame[] }) {
-    this.state.keyFrames = play.keyFrames;
-    if (play.keyFrames.length > 0) {
-      // Set initial positions
-      const firstFrame = play.keyFrames[0];
+  public loadPlay(play: { keyframes: KeyFrame[] }) {
+    this.state.keyFrames = play.keyframes;
+    if (this.state.keyFrames.length > 0) {
+      const firstFrame = this.state.keyFrames[0];
       Object.entries(firstFrame.positions).forEach(([playerId, position]) => {
         const player = this.state.players.find(p => p.id === playerId);
         if (player) {
           player.position = position;
-          player.hasBall = playerId === firstFrame.ballCarrier;
         }
       });
-
-      if (firstFrame.ballCarrier) {
-        const carrier = this.state.players.find(p => p.id === firstFrame.ballCarrier);
-        if (carrier) {
-          this.ballPosition = {
-            x: carrier.position.x + 10,
-            y: carrier.position.y - 10
-          };
-        }
-      }
     }
     this.render();
   }
@@ -341,45 +250,28 @@ export class GameEngine {
     const animate = () => {
       if (!this.state.isPlaying || frameIndex >= this.state.keyFrames.length) {
         this.state.isPlaying = false;
+        if (frameIndex >= this.state.keyFrames.length) {
+          frameIndex = 0;
+          this.loadPlay({ keyframes: this.state.keyFrames });
+        }
         return;
       }
 
       const frame = this.state.keyFrames[frameIndex];
 
-      // Update player positions
       Object.entries(frame.positions).forEach(([playerId, position]) => {
         const player = this.state.players.find(p => p.id === playerId);
         if (player) {
-          player.position = position;
-          player.hasBall = playerId === frame.ballCarrier;
-          if (player.hasBall) {
-            this.ballPosition = {
-              x: position.x + 10,
-              y: position.y - 10
-            };
-          }
+          player.position = { ...position };
         }
       });
 
       this.render();
       frameIndex++;
 
-      // Add delay between frames
-      setTimeout(() => requestAnimationFrame(animate), 1000);
+      setTimeout(() => requestAnimationFrame(animate), 500);
     };
 
     requestAnimationFrame(animate);
-  }
-
-  private updateBallVisualization() {
-    if (!this.state.isDraggingBall) {
-      const ballCarrier = this.state.players.find(p => p.hasBall);
-      if (ballCarrier) {
-        this.ballPosition = {
-          x: ballCarrier.position.x + 10,
-          y: ballCarrier.position.y - 10
-        };
-      }
-    }
   }
 }

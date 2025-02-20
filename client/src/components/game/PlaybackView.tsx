@@ -21,8 +21,8 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       canvas.height = canvas.width / aspectRatio;
 
       engineRef.current = new GameEngine(canvas);
-      // Convert the play data to match the expected format
-      engineRef.current.loadPlay({ keyFrames: play.keyframes });
+      // Load the play directly with keyframes
+      engineRef.current.loadPlay(play);
     }
   }, [play]);
 

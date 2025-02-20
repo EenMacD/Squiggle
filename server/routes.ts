@@ -7,20 +7,23 @@ import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+
+  // Initialize WebSocket server
   const wss = new WebSocketServer({ 
-    server: httpServer, 
+    server: httpServer,
     path: '/ws',
     clientTracking: true 
   });
 
+  // WebSocket connection handling
   wss.on('connection', (ws) => {
     log('WebSocket client connected');
 
     ws.on('message', (data) => {
       try {
-        // Broadcast game state updates to all clients
+        // Broadcast game state updates to all clients except sender
         wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
             client.send(data);
           }
         });
@@ -30,7 +33,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     ws.on('error', (error) => {
-      log(`WebSocket error: ${error}`);
+      log(`WebSocket client error: ${error}`);
     });
 
     ws.on('close', () => {
@@ -38,10 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  wss.on('error', (error) => {
-    log(`WebSocket server error: ${error}`);
-  });
-
+  // API Routes
   app.get("/api/plays", async (_req, res) => {
     try {
       const plays = await storage.getPlays();

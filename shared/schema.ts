@@ -2,20 +2,16 @@ import { pgTable, text, serial, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const playerMovement = z.object({
+// Basic position schema
+export const position = z.object({
   x: z.number(),
-  y: z.number(),
-  timestamp: z.number()
+  y: z.number()
 });
 
-// Update schema to include keyframes with ball position
+// Keyframe schema without ball carrier
 export const keyFrame = z.object({
   timestamp: z.number(),
-  ballCarrier: z.string(),
-  positions: z.record(z.string(), z.object({
-    x: z.number(),
-    y: z.number()
-  }))
+  positions: z.record(z.string(), position)
 });
 
 export const plays = pgTable("plays", {

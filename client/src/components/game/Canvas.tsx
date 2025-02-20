@@ -44,30 +44,14 @@ export function Canvas() {
     gameEngine.updateDragPosition(x, y);
   };
 
-  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!gameEngine || !canvasRef.current) return;
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const scaleX = canvasRef.current.width / rect.width;
-    const scaleY = canvasRef.current.height / rect.height;
-
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    gameEngine.stopDragging(x, y);
+  const handleCanvasMouseUp = () => {
+    if (!gameEngine) return;
+    gameEngine.stopDragging();
   };
 
-  const handleMouseLeave = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!gameEngine || !canvasRef.current) return;
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const scaleX = canvasRef.current.width / rect.width;
-    const scaleY = canvasRef.current.height / rect.height;
-
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    gameEngine.stopDragging(x, y);
+  const handleMouseLeave = () => {
+    if (!gameEngine) return;
+    gameEngine.stopDragging();
   };
 
   return (
