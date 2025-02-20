@@ -21,7 +21,8 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       canvas.height = canvas.width / aspectRatio;
 
       engineRef.current = new GameEngine(canvas);
-      engineRef.current.loadPlay(play);
+      // Convert the play data to match the expected format
+      engineRef.current.loadPlay({ keyFrames: play.keyframes });
     }
   }, [play]);
 
@@ -41,12 +42,12 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       >
         <X className="h-4 w-4" />
       </Button>
-      
+
       <canvas
         ref={canvasRef}
         className="w-full border border-border rounded-lg bg-black"
       />
-      
+
       <div className="flex justify-center">
         <Button 
           size="lg"

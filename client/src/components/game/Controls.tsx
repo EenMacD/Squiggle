@@ -53,10 +53,10 @@ export function Controls({ gameEngine }: ControlsProps) {
     }
 
     try {
-      const keyFrames = gameEngine.getRecordedKeyFrames();
-      console.log('Saving keyFrames:', keyFrames);
+      const keyframes = gameEngine.getRecordedKeyFrames(); // Store as keyframes
+      console.log('Saving keyframes:', keyframes);
 
-      if (keyFrames.length === 0) {
+      if (keyframes.length === 0) {
         toast({
           title: "Error",
           description: "No movements recorded. Try moving the ball between players first.",
@@ -68,7 +68,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       const playData = {
         name: playName,
         category: "default",
-        keyFrames
+        keyframes // Use lowercase keyframes to match schema
       };
 
       console.log('Sending play data:', playData);

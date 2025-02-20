@@ -22,7 +22,7 @@ export const plays = pgTable("plays", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   category: text("category").notNull(),
-  keyFrames: jsonb("keyframes").notNull().$type<z.infer<typeof keyFrame>[]>(),
+  keyframes: jsonb("keyframes").notNull().$type<z.infer<typeof keyFrame>[]>(),
 });
 
 export const insertPlaySchema = createInsertSchema(plays);
