@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlayCircle, StopCircle, Save } from "lucide-react";
+import { PlayCircle, StopCircle } from "lucide-react";
 import { useState, useRef } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { useToast } from "@/hooks/use-toast";
