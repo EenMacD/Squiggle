@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, PlayCircle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { GameEngine } from "@/lib/gameEngine";
-import type { Play as PlayType } from "@shared/schema";
+import type { Play } from "@shared/schema";
 
 interface PlaybackViewProps {
-  play: PlayType;
+  play: Play;
   onClose: () => void;
 }
 
@@ -21,16 +21,9 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       canvas.height = canvas.width / aspectRatio;
 
       engineRef.current = new GameEngine(canvas);
-      // Load the play directly with keyframes
       engineRef.current.loadPlay(play);
     }
   }, [play]);
-
-  const handlePlayback = () => {
-    if (engineRef.current) {
-      engineRef.current.startPlayback();
-    }
-  };
 
   return (
     <div className="relative flex flex-col gap-4">
@@ -47,16 +40,6 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         ref={canvasRef}
         className="w-full border border-border rounded-lg bg-black"
       />
-
-      <div className="flex justify-center">
-        <Button 
-          size="lg"
-          onClick={handlePlayback}
-        >
-          <PlayCircle className="h-6 w-6 mr-2" />
-          Play
-        </Button>
-      </div>
     </div>
   );
 }

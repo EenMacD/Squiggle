@@ -36,11 +36,6 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
       log(logLine);
     }
   });
@@ -48,20 +43,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Function to handle graceful shutdown
-function gracefulShutdown(server: any) {
-  return () => {
-    log('Received shutdown signal. Closing server...');
-    server.close(() => {
-      log('Server closed. Exiting process.');
-      process.exit(0);
-    });
-  };
-}
-
 (async () => {
   try {
-    log('Initializing server...');
+    log('Starting server initialization...');
     const server = await registerRoutes(app);
 
     // Error handling middleware
@@ -72,26 +56,37 @@ function gracefulShutdown(server: any) {
       res.status(status).json({ message });
     });
 
-    // Set up Vite or static serving based on environment
+    // Re-enable Vite middleware for development
     if (process.env.NODE_ENV !== "production") {
       log('Setting up Vite middleware...');
       await setupVite(app, server);
-      log('Vite middleware setup complete');
     } else {
       log('Setting up static file serving...');
       serveStatic(app);
     }
 
-    const PORT = Number(process.env.PORT) || 5000; // Changed fallback port to 5000
-    log(`Starting server on port ${PORT}...`);
+    const PORT = Number(process.env.PORT) || 3000;
+    log(`Attempting to start server on port ${PORT}...`);
 
     server.listen(PORT, "0.0.0.0", () => {
-      log(`Server listening on port ${PORT}`);
+      log(`Server successfully started and listening on port ${PORT}`);
     });
 
-    // Handle graceful shutdown
-    process.on('SIGTERM', gracefulShutdown(server));
-    process.on('SIGINT', gracefulShutdown(server));
+    process.on('SIGTERM', () => {
+      log('Received SIGTERM signal. Closing server...');
+      server.close(() => {
+        log('Server closed. Exiting process.');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      log('Received SIGINT signal. Closing server...');
+      server.close(() => {
+        log('Server closed. Exiting process.');
+        process.exit(0);
+      });
+    });
 
   } catch (error) {
     log(`Failed to start server: ${error}`);

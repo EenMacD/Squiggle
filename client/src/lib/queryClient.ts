@@ -7,9 +7,9 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// Update API base URL to be dynamic based on environment
+// Update API base URL to use port 3000 in development
 const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5001'
+  ? 'http://localhost:3000'
   : `${window.location.protocol}//${window.location.host}`;
 
 export async function apiRequest(
@@ -18,7 +18,7 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const fullUrl = `${API_BASE_URL}${url}`;
-  console.log('Making API request to:', fullUrl); // Debug log
+  console.log('Making API request to:', fullUrl);
 
   const res = await fetch(fullUrl, {
     method,
@@ -38,7 +38,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const fullUrl = `${API_BASE_URL}${queryKey[0]}`;
-    console.log('Making query to:', fullUrl); // Debug log
+    console.log('Making query to:', fullUrl);
 
     const res = await fetch(fullUrl, {
       credentials: "include",

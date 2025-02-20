@@ -37,7 +37,7 @@ export function Controls({ gameEngine }: ControlsProps) {
     } else {
       toast({
         title: "Recording started",
-        description: "Move the ball between players to record key frames"
+        description: "Move players to record their positions"
       });
     }
   };
@@ -53,13 +53,13 @@ export function Controls({ gameEngine }: ControlsProps) {
     }
 
     try {
-      const keyframes = gameEngine.getRecordedKeyFrames(); // Store as keyframes
+      const keyframes = gameEngine.getRecordedKeyFrames();
       console.log('Saving keyframes:', keyframes);
 
       if (keyframes.length === 0) {
         toast({
           title: "Error",
-          description: "No movements recorded. Try moving the ball between players first.",
+          description: "No movements recorded. Try moving players first.",
           variant: "destructive"
         });
         return;
@@ -68,7 +68,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       const playData = {
         name: playName,
         category: "default",
-        keyframes // Use lowercase keyframes to match schema
+        keyframes
       };
 
       console.log('Sending play data:', playData);
