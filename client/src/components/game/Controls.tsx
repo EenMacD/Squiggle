@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlayCircle, StopCircle } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,7 +14,7 @@ interface ControlsProps {
 }
 
 export function Controls({ gameEngine }: ControlsProps) {
-  const isRecordingRef = useRef(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [playName, setPlayName] = useState("");
   const { toast } = useToast();
@@ -22,7 +22,7 @@ export function Controls({ gameEngine }: ControlsProps) {
   const handleRecordingToggle = () => {
     if (!gameEngine) return;
 
-    if (isRecordingRef.current) {
+    if (isRecording) {
       // Stopping recording
       gameEngine.toggleRecording();
       setShowSaveDialog(true);
@@ -30,7 +30,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       // Starting recording
       gameEngine.toggleRecording();
     }
-    isRecordingRef.current = !isRecordingRef.current;
+    setIsRecording(!isRecording);
   };
 
   const handleSavePlay = async () => {
@@ -54,6 +54,7 @@ export function Controls({ gameEngine }: ControlsProps) {
 
       setShowSaveDialog(false);
       setPlayName("");
+      setIsRecording(false);
     } catch (error) {
       toast({
         title: "Error saving play",
@@ -71,7 +72,7 @@ export function Controls({ gameEngine }: ControlsProps) {
           size="sm"
           onClick={handleRecordingToggle}
         >
-          {isRecordingRef.current ? (
+          {isRecording ? (
             <>
               <StopCircle className="h-4 w-4 mr-2" />
               Stop Recording
