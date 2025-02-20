@@ -20,30 +20,56 @@ export function Controls({ gameEngine }: ControlsProps) {
   const { toast } = useToast();
 
   const handleRecordingToggle = () => {
-    if (!gameEngine) return;
-
-    gameEngine.toggleRecording();
-
-    if (isRecording) {
-      // Stopping recording
-      setShowSaveDialog(true);
+    if (!gameEngine) {
+      toast({
+        title: "Error",
+        description: "Game engine not initialized",
+        variant: "destructive"
+      });
+      return;
     }
 
-    setIsRecording(!isRecording);
+    const newRecordingState = gameEngine.toggleRecording();
+    setIsRecording(newRecordingState);
+
+    if (!newRecordingState) { // If we just stopped recording
+      setShowSaveDialog(true);
+    } else {
+      toast({
+        title: "Recording started",
+        description: "Move players to record their positions"
+      });
+    }
   };
 
   const handleSavePlay = async () => {
-    if (!gameEngine || !playName.trim()) return;
+    if (!gameEngine || !playName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a name for the play",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       const movements = gameEngine.getRecordedMovements();
+
+      if (Object.keys(movements.team1).length === 0 && Object.keys(movements.team2).length === 0) {
+        toast({
+          title: "Error",
+          description: "No movements recorded. Try recording some player movements first.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       await apiRequest("POST", "/api/plays", {
         name: playName,
         category: "default",
         movements
       });
 
-      // Invalidate the plays query to refetch the list
       await queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
 
       toast({

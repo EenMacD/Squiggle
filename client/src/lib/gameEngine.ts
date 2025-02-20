@@ -1,6 +1,7 @@
 export interface Position {
   x: number;
   y: number;
+  timestamp?: number; // Added timestamp
 }
 
 export interface Player {
@@ -44,7 +45,6 @@ export class GameEngine {
     };
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    // Update the WebSocket URL to use port 5001
     const wsUrl = `${protocol}//localhost:5001/ws`;
     this.socket = new WebSocket(wsUrl);
 
@@ -155,6 +155,13 @@ export class GameEngine {
     });
   }
 
+  private updateGameState() {
+    // Broadcast state update via WebSocket
+    if (this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(this.state));
+    }
+  }
+
   public startDragging(x: number, y: number) {
     const clickedPlayer = this.state.players.find(p => {
       const dx = p.position.x - x;
@@ -198,11 +205,16 @@ export class GameEngine {
 
   public toggleRecording() {
     this.state.isRecording = !this.state.isRecording;
+
     if (this.state.isRecording) {
       // Clear all trails when starting a new recording
       this.state.players.forEach(p => p.trail = []);
     }
+
+    this.updateGameState();
     this.render();
+
+    return this.state.isRecording;
   }
 
   public updatePlayerPosition(x: number, y: number) {
@@ -218,9 +230,14 @@ export class GameEngine {
 
         // Record trail if recording is active
         if (this.state.isRecording) {
-          player.trail.push({ x: boundedX, y: boundedY });
+          player.trail.push({
+            x: boundedX,
+            y: boundedY,
+            timestamp: Date.now()
+          });
         }
 
+        this.updateGameState();
         this.render();
       }
     }
