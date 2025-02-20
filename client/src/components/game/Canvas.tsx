@@ -9,7 +9,6 @@ export function Canvas() {
   useEffect(() => {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
-      // Set canvas size with correct aspect ratio
       const aspectRatio = 4/3;
       canvas.width = 800;
       canvas.height = canvas.width / aspectRatio;
@@ -29,25 +28,7 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    gameEngine.startDragging(x, y);
-  };
-
-  const handleCanvasMouseUp = () => {
-    if (!gameEngine) return;
-    gameEngine.stopDragging();
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!gameEngine || !canvasRef.current) return;
-
-    const rect = canvasRef.current.getBoundingClientRect();
-    const scaleX = canvasRef.current.width / rect.width;
-    const scaleY = canvasRef.current.height / rect.height;
-
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    gameEngine.selectPlayer(x, y);
+    gameEngine.startDraggingBall(x, y);
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -60,12 +41,30 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    gameEngine.updatePlayerPosition(x, y);
+    gameEngine.updateBallPosition(x, y);
+  };
+
+  const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!gameEngine || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = canvasRef.current.width / rect.width;
+    const scaleY = canvasRef.current.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    gameEngine.stopDraggingBall(x, y);
   };
 
   const handleMouseLeave = () => {
-    if (!gameEngine) return;
-    gameEngine.stopDragging();
+    if (!gameEngine || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    gameEngine.stopDraggingBall(
+      gameEngine.getLastBallPosition().x,
+      gameEngine.getLastBallPosition().y
+    );
   };
 
   return (
@@ -73,10 +72,9 @@ export function Canvas() {
       <canvas
         ref={canvasRef}
         className="w-full border border-border rounded-lg bg-black"
-        onClick={handleCanvasClick}
         onMouseDown={handleCanvasMouseDown}
-        onMouseUp={handleCanvasMouseUp}
         onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleMouseLeave}
       />
       {gameEngine && <Controls gameEngine={gameEngine} />}

@@ -1,22 +1,19 @@
 export interface Position {
   x: number;
   y: number;
-  timestamp?: number; // Added timestamp
+}
+
+export interface KeyFrame {
+  timestamp: number;
+  ballCarrier: string;
+  positions: Record<string, Position>;
 }
 
 export interface Player {
   id: string;
   team: 1 | 2;
   position: Position;
-  trail: Position[];
   hasBall: boolean;
-}
-
-interface Play {
-  movements: {
-    team1: { [playerId: string]: Position[] };
-    team2: { [playerId: string]: Position[] };
-  };
 }
 
 export interface GameState {
@@ -24,7 +21,8 @@ export interface GameState {
   selectedPlayer: string | null;
   isRecording: boolean;
   isPlaying: boolean;
-  isDragging: boolean;
+  isDraggingBall: boolean;
+  keyFrames: KeyFrame[];
 }
 
 export class GameEngine {
@@ -32,6 +30,7 @@ export class GameEngine {
   private ctx: CanvasRenderingContext2D;
   private state: GameState;
   private socket: WebSocket;
+  private ballPosition: Position | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -41,12 +40,19 @@ export class GameEngine {
       selectedPlayer: null,
       isRecording: false,
       isPlaying: false,
-      isDragging: false
+      isDraggingBall: false,
+      keyFrames: []
     };
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//localhost:5001/ws`;
     this.socket = new WebSocket(wsUrl);
+
+    // Initialize ball with the middle player of team 1
+    const initialCarrier = this.state.players.find(p => p.team === 1 && p.hasBall);
+    if (initialCarrier) {
+      this.ballPosition = { ...initialCarrier.position };
+    }
 
     this.setupWebSocket();
     this.render();
@@ -65,7 +71,6 @@ export class GameEngine {
           x: this.canvas.width * 0.25,
           y: spacing + (i * spacing)
         },
-        trail: [],
         hasBall: i === 2 // Middle player starts with the ball
       });
     }
@@ -79,7 +84,6 @@ export class GameEngine {
           x: this.canvas.width * 0.75,
           y: spacing + (i * spacing)
         },
-        trail: [],
         hasBall: false
       });
     }
@@ -87,18 +91,80 @@ export class GameEngine {
     return players;
   }
 
-  private setupWebSocket() {
-    this.socket.onmessage = (event) => {
-      const update = JSON.parse(event.data);
-      this.state = { ...this.state, ...update };
+  public startDraggingBall(x: number, y: number) {
+    const ballCarrier = this.state.players.find(p => p.hasBall);
+    if (ballCarrier && this.ballPosition) {
+      const dx = this.ballPosition.x - x;
+      const dy = this.ballPosition.y - y;
+      if (Math.sqrt(dx * dx + dy * dy) < 15) {
+        this.state.isDraggingBall = true;
+        ballCarrier.hasBall = false;
+        this.render();
+      }
+    }
+  }
+
+  public updateBallPosition(x: number, y: number) {
+    if (this.state.isDraggingBall) {
+      this.ballPosition = { x, y };
       this.render();
+    }
+  }
+
+  public stopDraggingBall(x: number, y: number) {
+    if (this.state.isDraggingBall && this.ballPosition) {
+      const nearestPlayer = this.findNearestPlayer(x, y);
+      if (nearestPlayer) {
+        nearestPlayer.hasBall = true;
+        this.ballPosition = { ...nearestPlayer.position };
+
+        if (this.state.isRecording) {
+          this.recordKeyFrame(nearestPlayer.id);
+        }
+      }
+      this.state.isDraggingBall = false;
+      this.render();
+    }
+  }
+
+  private findNearestPlayer(x: number, y: number): Player | null {
+    let nearest: Player | null = null;
+    let minDistance = Infinity;
+
+    this.state.players.forEach(player => {
+      const dx = player.position.x - x;
+      const dy = player.position.y - y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance && distance < 30) {
+        minDistance = distance;
+        nearest = player;
+      }
+    });
+
+    return nearest;
+  }
+
+  private recordKeyFrame(ballCarrierId: string) {
+    const positions: Record<string, Position> = {};
+    this.state.players.forEach(player => {
+      positions[player.id] = { ...player.position };
+    });
+
+    const keyFrame: KeyFrame = {
+      timestamp: Date.now(),
+      ballCarrier: ballCarrierId,
+      positions
     };
+
+    this.state.keyFrames.push(keyFrame);
   }
 
   public render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawField();
     this.drawPlayers();
+    this.drawBall();
   }
 
   private drawField() {
@@ -122,30 +188,10 @@ export class GameEngine {
 
   private drawPlayers() {
     this.state.players.forEach(player => {
-      // Draw trail
-      if (player.trail.length > 0) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(player.trail[0].x, player.trail[0].y);
-        player.trail.forEach(pos => {
-          this.ctx.lineTo(pos.x, pos.y);
-        });
-        this.ctx.strokeStyle = player.team === 1 ? 'rgba(255,0,0,0.5)' : 'rgba(0,0,255,0.5)';
-        this.ctx.stroke();
-      }
-
-      // Draw player
       this.ctx.beginPath();
       this.ctx.arc(player.position.x, player.position.y, 15, 0, Math.PI * 2);
       this.ctx.fillStyle = player.team === 1 ? 'red' : 'blue';
       this.ctx.fill();
-
-      // Draw ball if player has it
-      if (player.hasBall) {
-        this.ctx.beginPath();
-        this.ctx.arc(player.position.x, player.position.y, 5, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'white';
-        this.ctx.fill();
-      }
 
       if (player.id === this.state.selectedPlayer) {
         this.ctx.strokeStyle = 'yellow';
@@ -155,163 +201,101 @@ export class GameEngine {
     });
   }
 
-  private updateGameState() {
-    // Broadcast state update via WebSocket
-    if (this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(this.state));
+  private drawBall() {
+    if (this.ballPosition) {
+      this.ctx.beginPath();
+      this.ctx.arc(this.ballPosition.x, this.ballPosition.y, 8, 0, Math.PI * 2);
+      this.ctx.fillStyle = 'white';
+      this.ctx.fill();
+      this.ctx.strokeStyle = 'black';
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
     }
   }
 
-  public startDragging(x: number, y: number) {
-    const clickedPlayer = this.state.players.find(p => {
-      const dx = p.position.x - x;
-      const dy = p.position.y - y;
-      return Math.sqrt(dx * dx + dy * dy) < 15;
-    });
-
-    if (clickedPlayer) {
-      this.state.selectedPlayer = clickedPlayer.id;
-      this.state.isDragging = true;
+  private setupWebSocket() {
+    this.socket.onmessage = (event) => {
+      const update = JSON.parse(event.data);
+      this.state = { ...this.state, ...update };
       this.render();
-    }
-  }
-
-  public stopDragging() {
-    this.state.isDragging = false;
-  }
-
-  public selectPlayer(x: number, y: number) {
-    if (this.state.isDragging) return; // Don't select while dragging
-
-    const clickedPlayer = this.state.players.find(p => {
-      const dx = p.position.x - x;
-      const dy = p.position.y - y;
-      return Math.sqrt(dx * dx + dy * dy) < 15;
-    });
-
-    if (clickedPlayer) {
-      if (this.state.selectedPlayer) {
-        const currentPlayer = this.state.players.find(p => p.id === this.state.selectedPlayer);
-        if (currentPlayer?.hasBall && clickedPlayer.team === currentPlayer.team) {
-          // Pass the ball
-          currentPlayer.hasBall = false;
-          clickedPlayer.hasBall = true;
-        }
-      }
-      this.state.selectedPlayer = clickedPlayer.id;
-      this.render();
-    }
+    };
   }
 
   public toggleRecording() {
     this.state.isRecording = !this.state.isRecording;
 
     if (this.state.isRecording) {
-      // Clear all trails when starting a new recording
-      this.state.players.forEach(p => p.trail = []);
+      this.state.keyFrames = [];
+      // Record initial positions
+      const ballCarrier = this.state.players.find(p => p.hasBall);
+      if (ballCarrier) {
+        this.recordKeyFrame(ballCarrier.id);
+      }
     }
-
-    this.updateGameState();
-    this.render();
 
     return this.state.isRecording;
   }
 
-  public updatePlayerPosition(x: number, y: number) {
-    if (this.state.selectedPlayer && !this.state.isPlaying && this.state.isDragging) {
-      const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
-      if (player) {
-        // Keep player within field bounds
-        const boundedX = Math.max(50, Math.min(this.canvas.width - 50, x));
-        const boundedY = Math.max(50, Math.min(this.canvas.height - 50, y));
-
-        // Update position
-        player.position = { x: boundedX, y: boundedY };
-
-        // Record trail if recording is active
-        if (this.state.isRecording) {
-          player.trail.push({
-            x: boundedX,
-            y: boundedY,
-            timestamp: Date.now()
-          });
-        }
-
-        this.updateGameState();
-        this.render();
-      }
-    }
+  public getRecordedKeyFrames(): KeyFrame[] {
+    return this.state.keyFrames;
   }
 
-  public loadPlay(play: Play) {
-    this.state.players.forEach((player, index) => {
-      const teamKey = player.team === 1 ? 'team1' : 'team2';
-      const playerMovements = play.movements[teamKey][player.id] || [];
-      player.trail = playerMovements;
-    });
+  public loadPlay(play: { keyFrames: KeyFrame[] }) {
+    this.state.keyFrames = play.keyFrames;
+    if (play.keyFrames.length > 0) {
+      // Set initial positions
+      const firstFrame = play.keyFrames[0];
+      Object.entries(firstFrame.positions).forEach(([playerId, position]) => {
+        const player = this.state.players.find(p => p.id === playerId);
+        if (player) {
+          player.position = position;
+          player.hasBall = playerId === firstFrame.ballCarrier;
+        }
+      });
+
+      if (firstFrame.ballCarrier) {
+        const carrier = this.state.players.find(p => p.id === firstFrame.ballCarrier);
+        if (carrier) {
+          this.ballPosition = { ...carrier.position };
+        }
+      }
+    }
     this.render();
   }
 
   public startPlayback() {
-    if (this.state.isPlaying) return;
+    if (this.state.isPlaying || this.state.keyFrames.length === 0) return;
 
     this.state.isPlaying = true;
-    let frame = 0;
+    let frameIndex = 0;
 
     const animate = () => {
-      if (!this.state.isPlaying) return;
+      if (!this.state.isPlaying || frameIndex >= this.state.keyFrames.length) {
+        this.state.isPlaying = false;
+        return;
+      }
 
-      // Update player positions based on their trails
-      this.state.players.forEach(player => {
-        if (player.trail.length > frame) {
-          player.position = player.trail[frame];
+      const frame = this.state.keyFrames[frameIndex];
+
+      // Update player positions
+      Object.entries(frame.positions).forEach(([playerId, position]) => {
+        const player = this.state.players.find(p => p.id === playerId);
+        if (player) {
+          player.position = position;
+          player.hasBall = playerId === frame.ballCarrier;
+          if (player.hasBall) {
+            this.ballPosition = { ...position };
+          }
         }
       });
 
       this.render();
-      frame++;
+      frameIndex++;
 
-      // Check if any player still has frames to play
-      const hasMoreFrames = this.state.players.some(p => p.trail.length > frame);
-      if (hasMoreFrames) {
-        requestAnimationFrame(animate);
-      } else {
-        this.state.isPlaying = false;
-        frame = 0;
-      }
+      // Add delay between frames
+      setTimeout(() => requestAnimationFrame(animate), 1000);
     };
 
     requestAnimationFrame(animate);
-  }
-
-  public stopPlayback() {
-    this.state.isPlaying = false;
-  }
-
-  // Update the getRecordedMovements method to ensure proper data structure
-  public getRecordedMovements() {
-    const team1Movements: Record<string, Position[]> = {};
-    const team2Movements: Record<string, Position[]> = {};
-
-    this.state.players.forEach(player => {
-      if (player.trail.length > 0) {
-        const movements = player.trail.map(pos => ({
-          x: pos.x,
-          y: pos.y,
-          timestamp: pos.timestamp || Date.now()
-        }));
-
-        if (player.team === 1) {
-          team1Movements[player.id] = movements;
-        } else {
-          team2Movements[player.id] = movements;
-        }
-      }
-    });
-
-    return {
-      team1: team1Movements,
-      team2: team2Movements
-    };
   }
 }

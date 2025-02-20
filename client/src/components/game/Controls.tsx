@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 
 interface ControlsProps {
-  gameEngine: GameEngine | null;
+  gameEngine: GameEngine;
 }
 
 export function Controls({ gameEngine }: ControlsProps) {
@@ -37,7 +37,7 @@ export function Controls({ gameEngine }: ControlsProps) {
     } else {
       toast({
         title: "Recording started",
-        description: "Move players to record their positions"
+        description: "Move the ball between players to record key frames"
       });
     }
   };
@@ -53,13 +53,13 @@ export function Controls({ gameEngine }: ControlsProps) {
     }
 
     try {
-      const movements = gameEngine.getRecordedMovements();
-      console.log('Saving movements:', movements); // Debug log
+      const keyFrames = gameEngine.getRecordedKeyFrames();
+      console.log('Saving keyFrames:', keyFrames);
 
-      if (Object.keys(movements.team1).length === 0 && Object.keys(movements.team2).length === 0) {
+      if (keyFrames.length === 0) {
         toast({
           title: "Error",
-          description: "No movements recorded. Try recording some player movements first.",
+          description: "No movements recorded. Try moving the ball between players first.",
           variant: "destructive"
         });
         return;
@@ -68,17 +68,14 @@ export function Controls({ gameEngine }: ControlsProps) {
       const playData = {
         name: playName,
         category: "default",
-        movements: {
-          team1: movements.team1,
-          team2: movements.team2
-        }
+        keyFrames
       };
 
-      console.log('Sending play data:', playData); // Debug log
+      console.log('Sending play data:', playData);
 
       const response = await apiRequest("POST", "/api/plays", playData);
       const result = await response.json();
-      console.log('Save response:', result); // Debug log
+      console.log('Save response:', result);
 
       await queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
 
@@ -91,7 +88,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       setPlayName("");
       setIsRecording(false);
     } catch (error) {
-      console.error('Save error:', error); // Debug log
+      console.error('Save error:', error);
       toast({
         title: "Error saving play",
         description: error instanceof Error ? error.message : "Failed to save the play. Please try again.",

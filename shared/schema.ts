@@ -8,14 +8,21 @@ export const playerMovement = z.object({
   timestamp: z.number()
 });
 
+// Update schema to include keyframes with ball position
+export const keyFrame = z.object({
+  timestamp: z.number(),
+  ballCarrier: z.string(),
+  positions: z.record(z.string(), z.object({
+    x: z.number(),
+    y: z.number()
+  }))
+});
+
 export const plays = pgTable("plays", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   category: text("category").notNull(),
-  movements: jsonb("movements").notNull().$type<{
-    team1: Record<string, z.infer<typeof playerMovement>[]>,
-    team2: Record<string, z.infer<typeof playerMovement>[]>
-  }>(),
+  keyFrames: jsonb("keyframes").notNull().$type<z.infer<typeof keyFrame>[]>(),
 });
 
 export const insertPlaySchema = createInsertSchema(plays);
