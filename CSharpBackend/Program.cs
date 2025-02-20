@@ -29,7 +29,7 @@ app.UseCors(builder => builder
 
 app.UseWebSockets();
 
-// WebSocket endpoint
+// WebSocket endpoint for game state updates
 app.Map("/ws", async context =>
 {
     if (context.WebSockets.IsWebSocketRequest)
@@ -51,6 +51,7 @@ async Task HandleWebSocketConnection(WebSocket webSocket)
 
     while (!receiveResult.CloseStatus.HasValue)
     {
+        // Broadcast received game state to all connected clients
         await webSocket.SendAsync(
             new ArraySegment<byte>(buffer, 0, receiveResult.Count),
             receiveResult.MessageType,
@@ -68,4 +69,4 @@ async Task HandleWebSocketConnection(WebSocket webSocket)
 }
 
 app.MapControllers();
-app.Run("http://0.0.0.0:5000");
+app.Run("http://0.0.0.0:5001");

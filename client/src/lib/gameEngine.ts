@@ -44,7 +44,8 @@ export class GameEngine {
     };
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    // Update the WebSocket URL to use port 5001
+    const wsUrl = `${protocol}//localhost:5001/ws`;
     this.socket = new WebSocket(wsUrl);
 
     this.setupWebSocket();
