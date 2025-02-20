@@ -22,14 +22,13 @@ export function Controls({ gameEngine }: ControlsProps) {
   const handleRecordingToggle = () => {
     if (!gameEngine) return;
 
+    gameEngine.toggleRecording();
+
     if (isRecording) {
       // Stopping recording
-      gameEngine.toggleRecording();
       setShowSaveDialog(true);
-    } else {
-      // Starting recording
-      gameEngine.toggleRecording();
     }
+
     setIsRecording(!isRecording);
   };
 
@@ -68,7 +67,7 @@ export function Controls({ gameEngine }: ControlsProps) {
     <>
       <div className="flex gap-4 items-center">
         <Button 
-          variant="outline" 
+          variant={isRecording ? "destructive" : "outline"}
           size="sm"
           onClick={handleRecordingToggle}
         >
