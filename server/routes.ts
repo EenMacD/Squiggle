@@ -19,14 +19,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   wss.on('connection', (ws) => {
     log('WebSocket client connected');
 
-    ws.on('message', (data) => {
+    ws.on('message', async (data) => {
       try {
-        // Broadcast game state updates to all clients except sender
-        wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(data);
-          }
-        });
+        const message = JSON.parse(data.toString());
+
+        // Handle different message types
+        switch (message.type) {
+          case 'PLAY_START':
+            // Broadcast play start to all clients
+            wss.clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'PLAY_START',
+                  playId: message.playId,
+                  timestamp: Date.now()
+                }));
+              }
+            });
+            break;
+
+          case 'PLAY_UPDATE':
+            // Broadcast position updates to all clients
+            wss.clients.forEach((client) => {
+              if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'PLAY_UPDATE',
+                  positions: message.positions,
+                  timestamp: Date.now()
+                }));
+              }
+            });
+            break;
+        }
       } catch (error) {
         log(`WebSocket message error: ${error}`);
       }
@@ -49,6 +73,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       log(`Error getting plays: ${error}`);
       res.status(500).json({ error: "Failed to get plays" });
+    }
+  });
+
+  app.get("/api/plays/:id", async (req, res) => {
+    try {
+      const plays = await storage.getPlays();
+      const play = plays.find(p => p.id === Number(req.params.id));
+      if (!play) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+      res.json(play);
+    } catch (error) {
+      log(`Error getting play: ${error}`);
+      res.status(500).json({ error: "Failed to get play" });
     }
   });
 
