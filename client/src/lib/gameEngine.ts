@@ -39,8 +39,8 @@ export class GameEngine {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
-    
-    // Initialize with ball at center field
+
+    // Initialize with ball at center field, larger size and contrasting color.
     const initialBallState: BallState = {
       position: {
         x: canvas.width / 2,
@@ -94,7 +94,7 @@ export class GameEngine {
 
   public startDragging(x: number, y: number) {
     // Check if we're clicking on the ball first
-    const ballRadius = 10;
+    const ballRadius = 20; // Increased ball radius for easier clicking
     const dx = this.state.ball.position.x - x;
     const dy = this.state.ball.position.y - y;
     const distanceToBall = Math.sqrt(dx * dx + dy * dy);
@@ -128,12 +128,12 @@ export class GameEngine {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         player.position = { x, y };
-        
+
         // Update ball position if player has possession
         if (this.state.ball.possessionPlayerId === player.id) {
           this.state.ball.position = { x, y };
         }
-        
+
         this.render();
       }
     }
@@ -151,7 +151,7 @@ export class GameEngine {
         // Transfer possession
         this.state.ball.possessionPlayerId = receivingPlayer.id;
         this.state.ball.position = { ...receivingPlayer.position };
-        
+
         if (this.state.isRecording) {
           this.recordKeyFrame();
         }
@@ -164,7 +164,7 @@ export class GameEngine {
           this.state.ball.position = { ...possessingPlayer.position };
         }
       }
-      
+
       this.state.isDraggingBall = false;
     }
 
@@ -327,8 +327,8 @@ export class GameEngine {
 
     // Draw ball
     this.ctx.beginPath();
-    this.ctx.arc(this.state.ball.position.x, this.state.ball.position.y, 10, 0, Math.PI * 2);
-    this.ctx.fillStyle = 'white';
+    this.ctx.arc(this.state.ball.position.x, this.state.ball.position.y, 20, 0, Math.PI * 2); // Increased ball size
+    this.ctx.fillStyle = 'yellow'; // Contrasting color
     this.ctx.fill();
     this.ctx.strokeStyle = '#cccccc';
     this.ctx.lineWidth = 1;
