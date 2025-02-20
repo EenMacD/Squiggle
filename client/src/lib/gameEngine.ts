@@ -96,7 +96,10 @@ export class GameEngine {
     if (ballCarrier && this.ballPosition) {
       const dx = this.ballPosition.x - x;
       const dy = this.ballPosition.y - y;
-      if (Math.sqrt(dx * dx + dy * dy) < 15) {
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Make it easier to grab the ball by increasing the grab radius
+      if (distance < 30) {
         this.state.isDraggingBall = true;
         ballCarrier.hasBall = false;
         this.render();
@@ -136,7 +139,8 @@ export class GameEngine {
       const dy = player.position.y - y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance < minDistance && distance < 30) {
+      // Increase the snap radius to make it easier to pass to players
+      if (distance < minDistance && distance < 50) {
         minDistance = distance;
         nearest = player;
       }
@@ -164,6 +168,7 @@ export class GameEngine {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawField();
     this.drawPlayers();
+    this.updateBallVisualization();
     this.drawBall();
   }
 
@@ -297,5 +302,19 @@ export class GameEngine {
     };
 
     requestAnimationFrame(animate);
+  }
+
+  public getLastBallPosition(): Position {
+    return this.ballPosition || { x: 0, y: 0 };
+  }
+
+  private updateBallVisualization() {
+    const ballCarrier = this.state.players.find(p => p.hasBall);
+    if (ballCarrier) {
+      this.ballPosition = {
+        x: ballCarrier.position.x + 10, // Offset the ball slightly from the player
+        y: ballCarrier.position.y - 10
+      };
+    }
   }
 }

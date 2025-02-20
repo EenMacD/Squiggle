@@ -60,11 +60,16 @@ export function Canvas() {
   const handleMouseLeave = () => {
     if (!gameEngine || !canvasRef.current) return;
 
+    // Instead of using getLastBallPosition, just stop dragging at current position
     const rect = canvasRef.current.getBoundingClientRect();
-    gameEngine.stopDraggingBall(
-      gameEngine.getLastBallPosition().x,
-      gameEngine.getLastBallPosition().y
-    );
+    const scaleX = canvasRef.current.width / rect.width;
+    const scaleY = canvasRef.current.height / rect.height;
+
+    // Get current mouse position
+    const x = (event?.clientX || 0 - rect.left) * scaleX;
+    const y = (event?.clientY || 0 - rect.top) * scaleY;
+
+    gameEngine.stopDraggingBall(x, y);
   };
 
   return (
