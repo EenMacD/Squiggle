@@ -24,6 +24,9 @@ export class GameEngine {
   private ctx: CanvasRenderingContext2D;
   private state: GameState;
   private isDragging: boolean = false;
+  private playbackInterval: number | null = null;
+  private currentKeyFrameIndex: number = 0;
+  private animationFrameId: number | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -143,6 +146,7 @@ export class GameEngine {
 
   public loadPlay(play: { keyframes: Array<{ timestamp: number; positions: Record<string, Position> }> }) {
     this.state.keyFrames = play.keyframes;
+    this.currentKeyFrameIndex = 0;
     if (this.state.keyFrames.length > 0) {
       // Set initial positions from first keyframe
       const firstFrame = this.state.keyFrames[0];
@@ -156,6 +160,50 @@ export class GameEngine {
     this.render();
   }
 
+  public startPlayback() {
+    if (this.animationFrameId) return;
+
+    const animate = () => {
+      if (this.currentKeyFrameIndex < this.state.keyFrames.length) {
+        const frame = this.state.keyFrames[this.currentKeyFrameIndex];
+        Object.entries(frame.positions).forEach(([playerId, position]) => {
+          const player = this.state.players.find(p => p.id === playerId);
+          if (player) {
+            player.position = position;
+          }
+        });
+        this.currentKeyFrameIndex++;
+        this.render();
+        this.animationFrameId = requestAnimationFrame(animate);
+      } else {
+        this.animationFrameId = null;
+      }
+    };
+
+    this.animationFrameId = requestAnimationFrame(animate);
+  }
+
+  public pausePlayback() {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
+  public resetPlayback() {
+    this.pausePlayback();
+    this.currentKeyFrameIndex = 0;
+    if (this.state.keyFrames.length > 0) {
+      const firstFrame = this.state.keyFrames[0];
+      Object.entries(firstFrame.positions).forEach(([playerId, position]) => {
+        const player = this.state.players.find(p => p.id === playerId);
+        if (player) {
+          player.position = position;
+        }
+      });
+      this.render();
+    }
+  }
 
   private render() {
     // Clear canvas
