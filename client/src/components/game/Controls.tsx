@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlayCircle, StopCircle } from "lucide-react";
+import { PlayCircle, StopCircle, Camera } from "lucide-react";
 import { useState } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { useToast } from "@/hooks/use-toast";
@@ -32,14 +32,41 @@ export function Controls({ gameEngine }: ControlsProps) {
     const newRecordingState = gameEngine.toggleRecording();
     setIsRecording(newRecordingState);
 
-    if (!newRecordingState) { // If we just stopped recording
-      setShowSaveDialog(true);
-    } else {
+    if (newRecordingState) {
       toast({
         title: "Recording started",
-        description: "Move players and pass the ball to record the sequence"
+        description: "Position players and take snapshots to record the sequence"
       });
+    } else {
+      if (gameEngine.getRecordedKeyFrames().length > 0) {
+        setShowSaveDialog(true);
+      } else {
+        toast({
+          title: "No snapshots taken",
+          description: "Take at least one snapshot before stopping the recording",
+          variant: "destructive"
+        });
+        setIsRecording(true);
+        gameEngine.toggleRecording(); // Resume recording
+      }
     }
+  };
+
+  const handleTakeSnapshot = () => {
+    if (!gameEngine || !isRecording) {
+      toast({
+        title: "Error",
+        description: "Start recording first before taking snapshots",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    gameEngine.takeSnapshot();
+    toast({
+      title: "Snapshot taken",
+      description: "Player positions have been recorded"
+    });
   };
 
   const handleSavePlay = async () => {
@@ -54,12 +81,11 @@ export function Controls({ gameEngine }: ControlsProps) {
 
     try {
       const keyframes = gameEngine.getRecordedKeyFrames();
-      console.log('Saving keyframes:', keyframes);
 
       if (keyframes.length === 0) {
         toast({
           title: "Error",
-          description: "No movements recorded. Try moving players and passing the ball first.",
+          description: "No snapshots recorded. Take at least one snapshot first.",
           variant: "destructive"
         });
         return;
@@ -71,11 +97,8 @@ export function Controls({ gameEngine }: ControlsProps) {
         keyframes
       };
 
-      console.log('Sending play data:', playData);
-
       const response = await apiRequest("POST", "/api/plays", playData);
       const result = await response.json();
-      console.log('Save response:', result);
 
       await queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
 
@@ -117,6 +140,17 @@ export function Controls({ gameEngine }: ControlsProps) {
             </>
           )}
         </Button>
+
+        {isRecording && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleTakeSnapshot}
+          >
+            <Camera className="h-4 w-4 mr-2" />
+            Take Snapshot
+          </Button>
+        )}
       </div>
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>

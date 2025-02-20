@@ -234,11 +234,26 @@ export class GameEngine {
 
     if (this.state.isRecording) {
       this.state.keyFrames = [];
-      this.recordKeyFrame(); // Record initial positions
     }
 
     return this.state.isRecording;
   }
+
+  public takeSnapshot() {
+    if (!this.state.isRecording) return;
+
+    const positions: Record<string, Position> = {};
+    this.state.players.forEach(player => {
+      positions[player.id] = { ...player.position };
+    });
+
+    this.state.keyFrames.push({
+      timestamp: Date.now(),
+      positions,
+      ball: { ...this.state.ball }
+    });
+  }
+
 
   private recordKeyFrame() {
     const positions: Record<string, Position> = {};
