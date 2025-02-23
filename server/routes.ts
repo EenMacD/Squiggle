@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertPlaySchema } from "@shared/schema";
+import { insertPlaySchema, insertFolderSchema } from "@shared/schema";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -65,7 +65,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // API Routes
+  // Folder Routes
+  app.get("/api/folders", async (_req, res) => {
+    try {
+      const folders = await storage.getFolders();
+      res.json(folders);
+    } catch (error) {
+      log(`Error getting folders: ${error}`);
+      res.status(500).json({ error: "Failed to get folders" });
+    }
+  });
+
+  app.post("/api/folders", async (req, res) => {
+    try {
+      const result = insertFolderSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      const folder = await storage.createFolder(result.data);
+      res.json(folder);
+    } catch (error) {
+      log(`Error creating folder: ${error}`);
+      res.status(500).json({ error: "Failed to create folder" });
+    }
+  });
+
+  app.delete("/api/folders/:id", async (req, res) => {
+    try {
+      await storage.deleteFolder(Number(req.params.id));
+      res.status(204).end();
+    } catch (error) {
+      log(`Error deleting folder: ${error}`);
+      res.status(500).json({ error: "Failed to delete folder" });
+    }
+  });
+
+  // Play Routes
   app.get("/api/plays", async (_req, res) => {
     try {
       const plays = await storage.getPlays();
@@ -111,6 +146,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       log(`Error creating play: ${error}`);
       res.status(500).json({ error: "Failed to create play" });
+    }
+  });
+
+  app.patch("/api/plays/:id/folder", async (req, res) => {
+    try {
+      const { folderId } = req.body;
+      const play = await storage.updatePlayFolder(Number(req.params.id), folderId);
+      res.json(play);
+    } catch (error) {
+      log(`Error updating play folder: ${error}`);
+      res.status(500).json({ error: "Failed to update play folder" });
     }
   });
 
