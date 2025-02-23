@@ -43,16 +43,7 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       // Load players and initial state from first keyframe
       if (play.keyframes.length > 0) {
         const firstFrame = play.keyframes[0];
-        const players = Object.entries(firstFrame.positions).map(([id, position]) => ({
-          id,
-          team: parseInt(id.split('-')[0].replace('team', '')) as 1 | 2,
-          position,
-          number: parseInt(id.split('-')[1]) + 1
-        }));
-
-        // Set initial state
-        engine.state.players = players;
-        engine.state.ball = firstFrame.ball;
+        engine.prepareStateForExport(firstFrame);
       }
 
       engine.loadPlay(play);
@@ -123,11 +114,17 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       // Reset playback to start
       engineRef.current.resetPlayback();
 
-      // Calculate frames based on keyframes and speed
-      const frameDuration = (1000 / 30) / playbackSpeed; // 30 fps
-      const frames: string[] = [];
+      // Ensure canvas dimensions are optimal for video export
+      const exportWidth = 1280; // Standard HD width
+      const exportHeight = 960; // Maintain 4:3 aspect ratio
+      const originalWidth = canvasRef.current.width;
+      const originalHeight = canvasRef.current.height;
+      canvasRef.current.width = exportWidth;
+      canvasRef.current.height = exportHeight;
+      engineRef.current.render(); // Re-render at new size
 
       // Generate frames
+      const frames: string[] = [];
       for (let i = 0; i < play.keyframes.length; i++) {
         engineRef.current.renderFrame(i);
         const frameData = canvasRef.current.toDataURL('image/png');
@@ -142,7 +139,7 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         '-framerate', '30',
         '-pattern_type', 'sequence',
         '-i', 'frame%04d.png',
-        '-filter:v', `setpts=${1/playbackSpeed}*PTS`,
+        '-vf', `setpts=${1/playbackSpeed}*PTS`,
         '-c:v', 'libx264',
         '-pix_fmt', 'yuv420p',
         'output.mp4'
@@ -151,11 +148,16 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       // Get the video data
       const data = await ffmpeg.readFile('output.mp4');
 
-      // Clean up files
+      // Clean up frames
       for (const frame of frames) {
         await ffmpeg.deleteFile(frame);
       }
       await ffmpeg.deleteFile('output.mp4');
+
+      // Restore original canvas dimensions
+      canvasRef.current.width = originalWidth;
+      canvasRef.current.height = originalHeight;
+      engineRef.current.render();
 
       // Create download link
       const blob = new Blob([data], { type: 'video/mp4' });
