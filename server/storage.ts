@@ -28,7 +28,11 @@ export class DatabaseStorage implements IStorage {
   async createFolder(insertFolder: InsertFolder): Promise<Folder> {
     const [folder] = await db
       .insert(folders)
-      .values(insertFolder)
+      .values({
+        name: insertFolder.name,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
       .returning();
     return folder;
   }
@@ -72,7 +76,11 @@ export class DatabaseStorage implements IStorage {
   async createPlay(insertPlay: InsertPlay): Promise<Play> {
     const [play] = await db
       .insert(plays)
-      .values(insertPlay)
+      .values({
+        ...insertPlay,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
       .returning();
     return play;
   }
