@@ -38,12 +38,6 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       canvas.height = height;
 
       const engine = new GameEngine(canvas);
-
-      if (play.keyframes.length > 0) {
-        const firstFrame = play.keyframes[0];
-        engine.prepareStateForExport(firstFrame);
-      }
-
       engine.loadPlay(play);
       engineRef.current = engine;
     }
@@ -108,48 +102,33 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
       });
 
-      const originalWidth = canvasRef.current.width;
-      const originalHeight = canvasRef.current.height;
-
-      const exportWidth = 1280;
-      const exportHeight = 960;
-
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = exportWidth;
-      tempCanvas.height = exportHeight;
-      const tempCtx = tempCanvas.getContext('2d')!;
-
-      engineRef.current.resetPlayback();
-      if (play.keyframes.length > 0) {
-        engineRef.current.prepareStateForExport(play.keyframes[0]);
-      }
+      // Create a new GameEngine instance specifically for export
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = 1280;  // HD width
+      exportCanvas.height = 960;  // Keep 4:3 aspect ratio
+      const exportEngine = new GameEngine(exportCanvas);
+      exportEngine.loadPlay(play);
 
       const frames: string[] = [];
+
+      // Generate each frame
       for (let i = 0; i < play.keyframes.length; i++) {
-        engineRef.current.renderFrame(i);
+        exportEngine.renderFrame(i);
 
-        tempCtx.drawImage(
-          canvasRef.current,
-          0, 0, originalWidth, originalHeight,
-          0, 0, exportWidth, exportHeight
-        );
-
-        const frameData = tempCanvas.toDataURL('image/png');
+        const frameData = exportCanvas.toDataURL('image/png');
         const base64Data = frameData.replace(/^data:image\/\w+;base64,/, '');
         const frameName = `frame${i.toString().padStart(4, '0')}.png`;
         await ffmpeg.writeFile(frameName, await fetchFile(new Uint8Array(Buffer.from(base64Data, 'base64'))));
         frames.push(frameName);
       }
 
-      const setptsValue = playbackSpeed >= 1 
-        ? `${1/playbackSpeed}*PTS` 
-        : `${1/playbackSpeed}*PTS`;
-
+      // Apply the correct playback speed
+      const speedFactor = 1 / playbackSpeed;
       await ffmpeg.exec([
         '-framerate', '30',
         '-pattern_type', 'sequence',
         '-i', 'frame%04d.png',
-        '-vf', `setpts=${setptsValue}`,
+        '-vf', `setpts=${speedFactor}*PTS`,
         '-c:v', 'libx264',
         '-pix_fmt', 'yuv420p',
         'output.mp4'
@@ -157,11 +136,13 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
 
       const data = await ffmpeg.readFile('output.mp4');
 
+      // Cleanup
       for (const frame of frames) {
         await ffmpeg.deleteFile(frame);
       }
       await ffmpeg.deleteFile('output.mp4');
 
+      // Download the video
       const blob = new Blob([data], { type: 'video/mp4' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
