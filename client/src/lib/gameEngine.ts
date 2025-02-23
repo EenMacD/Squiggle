@@ -595,6 +595,26 @@ export class GameEngine {
   }
 
   // Add this method to the GameEngine class
+  public renderFrame(frameIndex: number) {
+    if (frameIndex >= this.state.keyFrames.length) return;
+
+    const frame = this.state.keyFrames[frameIndex];
+
+    // Update positions
+    Object.entries(frame.positions).forEach(([playerId, position]) => {
+      const player = this.state.players.find(p => p.id === playerId);
+      if (player) {
+        player.position = position;
+      }
+    });
+
+    // Update ball
+    this.state.ball = { ...frame.ball };
+
+    // Render the frame
+    this.render();
+  }
+
   public isPlaybackActive(): boolean {
     return this.animationFrameId !== null && this.currentKeyFrameIndex < this.state.keyFrames.length;
   }
