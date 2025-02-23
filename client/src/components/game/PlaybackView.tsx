@@ -102,19 +102,18 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
       });
 
-      // Create a new GameEngine instance specifically for export
+      // Create a new GameEngine instance for export
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = 1280;  // HD width
       exportCanvas.height = 960;  // Keep 4:3 aspect ratio
       const exportEngine = new GameEngine(exportCanvas);
-      exportEngine.loadPlay(play);
+      exportEngine.loadPlay(play); // This will now properly initialize players
 
       const frames: string[] = [];
 
       // Generate each frame
       for (let i = 0; i < play.keyframes.length; i++) {
         exportEngine.renderFrame(i);
-
         const frameData = exportCanvas.toDataURL('image/png');
         const base64Data = frameData.replace(/^data:image\/\w+;base64,/, '');
         const frameName = `frame${i.toString().padStart(4, '0')}.png`;
@@ -136,7 +135,7 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
 
       const data = await ffmpeg.readFile('output.mp4');
 
-      // Cleanup
+      // Cleanup frames
       for (const frame of frames) {
         await ffmpeg.deleteFile(frame);
       }

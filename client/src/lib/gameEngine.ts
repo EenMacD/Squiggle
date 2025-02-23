@@ -344,17 +344,32 @@ export class GameEngine {
   public loadPlay(play: { keyframes: Array<{ timestamp: number; positions: Record<string, Position>; ball: BallState }> }) {
     this.state.keyFrames = play.keyframes;
     this.currentKeyFrameIndex = 0;
+
+    // Initialize state from first keyframe
     if (this.state.keyFrames.length > 0) {
-      // Set initial positions from first keyframe
       const firstFrame = this.state.keyFrames[0];
-      Object.entries(firstFrame.positions).forEach(([playerId, position]) => {
-        const player = this.state.players.find(p => p.id === playerId);
-        if (player) {
-          player.position = position;
-        }
+
+      // Initialize players with proper team assignments and numbers
+      this.state.players = Object.entries(firstFrame.positions).map(([id, position]) => {
+        const [teamStr, numStr] = id.split('-');
+        return {
+          id,
+          team: parseInt(teamStr.replace('team', '')) as 1 | 2,
+          position: { ...position },
+          number: parseInt(numStr)
+        };
       });
+
+      // Set initial ball state
       this.state.ball = { ...firstFrame.ball };
+
+      // Reset interaction states
+      this.state.selectedPlayer = null;
+      this.state.isDraggingBall = false;
+      this.state.isBallSelected = false;
     }
+
+    // Render initial state
     this.render();
   }
 
