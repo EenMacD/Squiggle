@@ -171,6 +171,7 @@ export function Canvas() {
     }
 
     gameEngine.removePlayersFromTeam(removePlayersDialog.team, removePlayersDialog.count);
+    gameEngine.ensureBallWithRedTeam(); // Added to keep ball with red team
     setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
   };
 

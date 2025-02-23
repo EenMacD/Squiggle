@@ -116,12 +116,14 @@ export class GameEngine {
     const teamPlayers = this.state.players.filter(p => p.team === team);
     if (teamPlayers.length <= targetCount) return;
 
-    // Remove players from the end of the array
-    const playersToRemove = teamPlayers.slice(targetCount);
-    this.state.players = this.state.players.filter(p => !playersToRemove.includes(p));
+    // Remove players from the end of the array until we reach target count
+    const playersToKeep = teamPlayers.slice(0, targetCount);
+    this.state.players = this.state.players.filter(p =>
+      p.team !== team || playersToKeep.includes(p)
+    );
 
     // If a removed player had the ball, give it to the first remaining red team player
-    if (playersToRemove.some(p => p.id === this.state.ball.possessionPlayerId)) {
+    if (!this.state.players.find(p => p.id === this.state.ball.possessionPlayerId)) {
       const redPlayer = this.state.players.find(p => p.team === 1);
       if (redPlayer) {
         this.state.ball.possessionPlayerId = redPlayer.id;
