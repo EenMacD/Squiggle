@@ -7,6 +7,7 @@ export interface Player {
   id: string;
   team: 1 | 2;
   position: Position;
+  number?: number;  // Optional number for the player
 }
 
 export interface BallState {
@@ -112,7 +113,8 @@ export class GameEngine {
       this.state.players.push({
         id: playerId,
         team,
-        position: { x, y }
+        position: { x, y },
+        number: this.state.players.length + 1  // Default sequential numbering
       });
 
       // Give ball to center attacker if it's the first red team player
@@ -461,6 +463,17 @@ export class GameEngine {
         this.ctx.lineWidth = 1;
         this.ctx.stroke();
       }
+
+      // Draw player number if exists
+      if (player.number !== undefined) {
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillStyle = 'white';
+        const numberY = player.team === 1 
+          ? player.position.y + this.TOKEN_RADIUS + 12  // Below red players
+          : player.position.y - this.TOKEN_RADIUS - 4;  // Above blue players
+        this.ctx.fillText(player.number.toString(), player.position.x, numberY);
+      }
     });
 
     this.drawBall();
@@ -491,6 +504,15 @@ export class GameEngine {
     return this.state.isRecording;
   }
 
+  public setPlayerNumber(playerId: string, number: number) {
+    if (number < 1 || number > 100) return; // Validate number range
+    const player = this.state.players.find(p => p.id === playerId);
+    if (player) {
+      player.number = number;
+      this.render();
+    }
+  }
+
   private setDefaultPositions(team: 1 | 2) {
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
@@ -511,7 +533,7 @@ export class GameEngine {
     const mainLineSpacing = fieldWidth / 7;
     // Calculate y-position: just below halfway for red team, middle of top half for blue team
     const mainLineY = team === 1
-      ? halfwayLine + 30  // Red team slightly below halfway line
+      ? halfwayLine + 50  // Red team 50px below halfway line (increased from 30)
       : halfwayLine - (fieldHeight / 4);  // Blue team in middle of their half
 
     const mainLineCount = Math.min(6, playerCount);
@@ -522,7 +544,8 @@ export class GameEngine {
       this.state.players.push({
         id: playerId,
         team,
-        position: { x, y: mainLineY }
+        position: { x, y: mainLineY },
+        number: i + 1
       });
 
       if (team === 1 && i === 2) {
@@ -560,7 +583,8 @@ export class GameEngine {
           position: {
             x: sidelineX + xOffset,
             y: fieldTop + 150 + (row * spacing)
-          }
+          },
+          number: i + 7
         });
       }
     }

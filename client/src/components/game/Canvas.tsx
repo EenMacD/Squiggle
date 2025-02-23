@@ -4,6 +4,7 @@ import { Controls } from "./Controls";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Plus, Minus, Trash2 } from "lucide-react";
 
 interface TokenDialogState {
@@ -15,6 +16,12 @@ interface TokenDialogState {
 interface RemovePlayersDialogState {
   isOpen: boolean;
   team: 1 | 2;
+}
+
+interface NumberDialogState {
+  isOpen: boolean;
+  playerId: string;
+  currentNumber: number;
 }
 
 export function Canvas() {
@@ -30,6 +37,11 @@ export function Canvas() {
   const [removePlayersDialog, setRemovePlayersDialog] = useState<RemovePlayersDialogState>({
     isOpen: false,
     team: 1
+  });
+  const [numberDialog, setNumberDialog] = useState<NumberDialogState>({
+    isOpen: false,
+    playerId: '',
+    currentNumber: 1
   });
 
   useEffect(() => {
@@ -85,6 +97,25 @@ export function Canvas() {
 
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
+
+    // Check for player number click
+    const clickedPlayer = gameEngine.state.players.find(player => {
+      const numberY = player.team === 1 
+        ? player.position.y + 15 + 12  // Below red players
+        : player.position.y - 15 - 4;  // Above blue players
+      const dx = x - player.position.x;
+      const dy = y - numberY;
+      return Math.sqrt(dx * dx + dy * dy) < 10;  // Small click area for numbers
+    });
+
+    if (clickedPlayer) {
+      setNumberDialog({
+        isOpen: true,
+        playerId: clickedPlayer.id,
+        currentNumber: clickedPlayer.number || 1
+      });
+      return;
+    }
 
     // Check for button clicks at the bottom
     const buttonY = canvasRef.current.height - 30;
@@ -165,6 +196,16 @@ export function Canvas() {
 
     gameEngine.removePlayersFromTeam(removePlayersDialog.team, 0);
     setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleNumberChange = () => {
+    if (!gameEngine) return;
+
+    const number = numberDialog.currentNumber;
+    if (number >= 1 && number <= 100) {
+      gameEngine.setPlayerNumber(numberDialog.playerId, number);
+      setNumberDialog(prev => ({ ...prev, isOpen: false }));
+    }
   };
 
   return (
@@ -333,6 +374,44 @@ export function Canvas() {
               onClick={handleRemovePlayers}
             >
               Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Number Edit Dialog */}
+      <Dialog
+        open={numberDialog.isOpen}
+        onOpenChange={(open) => setNumberDialog(prev => ({ ...prev, isOpen: open }))}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Player Number</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center gap-4 py-4">
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={numberDialog.currentNumber}
+              onChange={(e) => setNumberDialog(prev => ({
+                ...prev,
+                currentNumber: Math.min(100, Math.max(1, parseInt(e.target.value) || 1))
+              }))}
+              className="w-24 text-center"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNumberDialog(prev => ({ ...prev, isOpen: false }))}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleNumberChange}
+            >
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
