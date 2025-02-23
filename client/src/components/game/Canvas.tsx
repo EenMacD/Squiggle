@@ -215,10 +215,10 @@ export function Canvas() {
             )}
 
             <Button
-              variant={isRecording ? "destructive" : "secondary"}
+              variant={isRecording ? "destructive" : "default"}
               size="lg"
               onClick={handleRecordingToggle}
-              className={`w-full ${!isRecording ? "bg-white text-black hover:bg-gray-100" : ""}`}
+              className="w-full"
             >
               {isRecording ? (
                 <>
