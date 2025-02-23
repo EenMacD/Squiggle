@@ -128,48 +128,70 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
 
       // Initialize FFmpeg
       const ffmpeg = new FFmpeg();
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`/node_modules/@ffmpeg/core/dist/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`/node_modules/@ffmpeg/core/dist/ffmpeg-core.wasm`, 'application/wasm'),
+
+      setExportProgress(10);
+      toast({
+        title: "Export started",
+        description: "Initializing video export...",
       });
 
-      recorder.onstop = async () => {
-        setExportProgress(50); // Update progress after recording
-
-        const webmBlob = new Blob(chunks, { type: 'video/webm' });
-        const webmBuffer = await webmBlob.arrayBuffer();
-
-        // Write the WebM file to FFmpeg's virtual filesystem
-        await ffmpeg.writeFile('input.webm', new Uint8Array(webmBuffer));
-
-        // Convert WebM to MP4
-        await ffmpeg.exec([
-          '-i', 'input.webm',
-          '-c:v', 'libx264',
-          '-preset', 'fast',
-          '-crf', '22',
-          '-c:a', 'aac',
-          'output.mp4'
-        ]);
-
-        // Read the converted file
-        const data = await ffmpeg.readFile('output.mp4');
-        const mp4Blob = new Blob([data], { type: 'video/mp4' });
-
-        // Download the MP4 file
-        const url = URL.createObjectURL(mp4Blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${play.name.replace(/\s+/g, '_')}.mp4`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        setIsExporting(false);
-        setExportProgress(100);
-        toast({
-          title: "Export complete",
-          description: "Your play animation has been downloaded as MP4.",
+      // Load FFmpeg with error handling
+      try {
+        await ffmpeg.load({
+          coreURL: '/node_modules/@ffmpeg/core/dist/ffmpeg-core.js',
+          wasmURL: '/node_modules/@ffmpeg/core/dist/ffmpeg-core.wasm'
         });
+        setExportProgress(20);
+      } catch (error) {
+        console.error('FFmpeg load error:', error);
+        throw new Error('Failed to initialize video converter');
+      }
+
+      recorder.onstop = async () => {
+        try {
+          setExportProgress(40);
+          const webmBlob = new Blob(chunks, { type: 'video/webm' });
+          const webmBuffer = await webmBlob.arrayBuffer();
+
+          setExportProgress(50);
+          // Write the WebM file to FFmpeg's virtual filesystem
+          await ffmpeg.writeFile('input.webm', new Uint8Array(webmBuffer));
+
+          setExportProgress(60);
+          // Convert WebM to MP4
+          await ffmpeg.exec([
+            '-i', 'input.webm',
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '22',
+            '-c:a', 'aac',
+            'output.mp4'
+          ]);
+
+          setExportProgress(80);
+          // Read the converted file
+          const data = await ffmpeg.readFile('output.mp4');
+          const mp4Blob = new Blob([data], { type: 'video/mp4' });
+
+          setExportProgress(90);
+          // Download the MP4 file
+          const url = URL.createObjectURL(mp4Blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${play.name.replace(/\s+/g, '_')}.mp4`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          setExportProgress(100);
+          setIsExporting(false);
+          toast({
+            title: "Export complete",
+            description: "Your play animation has been downloaded as MP4.",
+          });
+        } catch (error) {
+          console.error('Conversion error:', error);
+          throw new Error('Failed to convert and save video');
+        }
       };
 
       // Start recording
@@ -192,7 +214,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       setExportProgress(0);
       toast({
         title: "Export failed",
-        description: "Failed to export the play animation. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to export the play animation. Please try again.",
         variant: "destructive"
       });
     }
