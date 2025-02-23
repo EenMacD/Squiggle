@@ -31,17 +31,15 @@ export interface GameState {
 export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  public state: GameState; // Made public for Controls component to access
+  public state: GameState;
   private isDragging: boolean = false;
   private playbackInterval: number | null = null;
   private currentKeyFrameIndex: number = 0;
   private animationFrameId: number | null = null;
   private playbackSpeed: number = 1;
   private lastFrameTime: number = 0;
-  private readonly TOKEN_SPACING = 40;
   private readonly TOKEN_RADIUS = 15;
-  private readonly TOKENS_PER_ROW = 5;
-  private readonly SIDELINE_WIDTH = 50; // Increased sideline width
+  private readonly SIDELINE_WIDTH = 50;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -49,7 +47,7 @@ export class GameEngine {
 
     const initialBallState: BallState = {
       position: {
-        x: canvas.width / 2, // Place ball in center of halfway line
+        x: canvas.width / 2,
         y: canvas.height / 2
       },
       possessionPlayerId: null
@@ -72,45 +70,39 @@ export class GameEngine {
     if (count <= 0) return;
 
     const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
-    if (existingTeamPlayers + count > 20) {
-      count = 20 - existingTeamPlayers;
+    if (existingTeamPlayers + count > 5) {
+      count = 5 - existingTeamPlayers; // Limit to 5 players per team
       if (count <= 0) return;
     }
 
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
-    const fieldMiddle = this.canvas.height / 2;
+    const fieldWidth = fieldRight - fieldLeft;
+    const spacing = fieldWidth / 6; // Divide field into 6 segments for 5 players
 
-    // Start position adjusted to be within field lines
-    const startX = team === 1 ? fieldLeft + 100 : fieldRight - 100;
+    // Y position based on team (attack at bottom, defense at top)
+    const attackY = this.canvas.height - 150; // Bottom half
+    const defenseY = 150; // Top half
+    const y = team === 1 ? attackY : defenseY;
 
-    // First check if this is the first red team player being added
-    const isFirstRedPlayer = team === 1 && this.state.players.filter(p => p.team === 1).length === 0;
-
+    // Add players in a row
     for (let i = 0; i < count; i++) {
-      const totalPlayers = existingTeamPlayers + i;
-      const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
-      const col = totalPlayers % this.TOKENS_PER_ROW;
-
       const playerId = `team${team}-${this.state.players.length}`;
-      const position = {
-        x: startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
-        y: Math.min(this.canvas.height - 100, Math.max(50, fieldMiddle + (row * this.TOKEN_SPACING)))
-      };
+      const x = fieldLeft + spacing * (i + 1); // Start from first segment
 
       this.state.players.push({
         id: playerId,
         team,
-        position
+        position: { x, y }
       });
 
-      // Give ball to first red team player
-      if (isFirstRedPlayer && i === 0) {
+      // Give ball to center attacker if it's the first red team player
+      if (team === 1 && this.state.players.filter(p => p.team === 1).length === 1) {
         const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
         this.state.ball.position = {
-          x: Math.min(fieldRight - offset, position.x + offset),
-          y: Math.max(50 + offset, position.y - offset)
+          x: Math.min(fieldRight - offset, x + offset),
+          y: Math.max(150 + offset, y - offset)
         };
       }
     }
@@ -154,34 +146,10 @@ export class GameEngine {
   }
 
   public startDragging(x: number, y: number) {
-    // Check for default position button clicks
-    const bottomY = this.canvas.height - 80; // Moved up above the bottom line
-    [1, 2].forEach((team: 1 | 2) => {
-      const isTeam1 = team === 1;
-      const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
-      const defaultBtnX = isTeam1 ? 50 + this.SIDELINE_WIDTH : this.canvas.width - 50 - this.SIDELINE_WIDTH; // Align with sidelines
-      const binBtnX = isTeam1 ? defaultBtnX + 90 : defaultBtnX - 90;
-      const buttonY = this.canvas.height - 30; // Default button positioned above the line
-
-      // Only check for button click if there are players for this team
-      if (this.state.players.filter(p => p.team === team).length > 0) {
-        // Default positions button click
-        if (x >= defaultBtnX - 60 && x <= defaultBtnX + 60 && y >= buttonY - 15 && y <= buttonY + 15) {
-          this.setDefaultPositions(team);
-          return;
-        }
-        // Bin button click
-        if (x >= binBtnX - 15 && x <= binBtnX + 15 && y >= buttonY - 15 && y <= buttonY + 15) {
-          this.removePlayersFromTeam(team, 0);
-          return;
-        }
-      }
-    });
-
     // Check if we're clicking on the ball
     if (this.checkBallClick(x, y)) return;
 
-    // If not clicking on ball or buttons, try to select a player
+    // If not clicking on ball, try to select a player
     const clickedPlayer = this.findNearestPlayer(x, y);
     if (clickedPlayer) {
       this.state.selectedPlayer = clickedPlayer.id;
@@ -214,7 +182,7 @@ export class GameEngine {
   }
 
   public updateDragPosition(x: number, y: number) {
-    // Field boundaries (adjusted for wider sidelines)
+    // Field boundaries
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldTop = 50;
@@ -440,7 +408,7 @@ export class GameEngine {
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
 
-    // Main field rectangle (adjusted for wider sidelines)
+    // Main field rectangle
     this.ctx.strokeRect(
       50 + this.SIDELINE_WIDTH,
       50,
@@ -449,75 +417,10 @@ export class GameEngine {
     );
 
     // Center line
-    this.ctx.strokeStyle = 'white';
     this.ctx.beginPath();
     this.ctx.moveTo(50 + this.SIDELINE_WIDTH, this.canvas.height / 2);
     this.ctx.lineTo(this.canvas.width - 50 - this.SIDELINE_WIDTH, this.canvas.height / 2);
     this.ctx.stroke();
-
-    // Draw token spawners and control buttons
-    [1, 2].forEach((team: 1 | 2) => {
-      const isTeam1 = team === 1;
-      const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
-      const defaultBtnX = isTeam1 ? 50 + this.SIDELINE_WIDTH : this.canvas.width - 50 - this.SIDELINE_WIDTH;
-      const binBtnX = isTeam1 ? defaultBtnX + 90 : defaultBtnX - 90;
-      const spawnerY = this.canvas.height - 50;
-      const buttonY = this.canvas.height - 30; // Moved below the bottom line
-
-      // Draw token spawner
-      this.ctx.beginPath();
-      this.ctx.arc(spawnerX, spawnerY, this.TOKEN_RADIUS, 0, Math.PI * 2);
-      this.ctx.fillStyle = isTeam1 ? 'red' : 'blue';
-      this.ctx.fill();
-
-      // Draw + symbol
-      this.ctx.strokeStyle = 'white';
-      this.ctx.lineWidth = 2;
-      this.ctx.beginPath();
-      this.ctx.moveTo(spawnerX - 5, spawnerY);
-      this.ctx.lineTo(spawnerX + 5, spawnerY);
-      this.ctx.moveTo(spawnerX, spawnerY - 5);
-      this.ctx.lineTo(spawnerX, spawnerY + 5);
-      this.ctx.stroke();
-
-      // Draw default position button and bin button if there are players
-      if (this.state.players.filter(p => p.team === team).length > 0) {
-        // Default positions button
-        this.ctx.fillStyle = isTeam1 ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
-        this.ctx.beginPath();
-        this.ctx.roundRect(defaultBtnX - 60, buttonY - 15, 120, 30, 5);
-        this.ctx.fill();
-        this.ctx.strokeStyle = 'white';
-        this.ctx.strokeRect(defaultBtnX - 60, buttonY - 15, 120, 30);
-
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = '12px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText('Default positions', defaultBtnX, buttonY);
-
-        // Bin button
-        this.ctx.fillStyle = isTeam1 ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
-        this.ctx.beginPath();
-        this.ctx.roundRect(binBtnX - 15, buttonY - 15, 30, 30, 5);
-        this.ctx.fill();
-        this.ctx.strokeStyle = 'white';
-        this.ctx.strokeRect(binBtnX - 15, buttonY - 15, 30, 30);
-
-        // Draw bin icon
-        this.ctx.strokeStyle = 'white';
-        this.ctx.beginPath();
-        // Top of bin
-        this.ctx.moveTo(binBtnX - 8, buttonY - 8);
-        this.ctx.lineTo(binBtnX + 8, buttonY - 8);
-        // Sides of bin
-        this.ctx.moveTo(binBtnX - 6, buttonY - 8);
-        this.ctx.lineTo(binBtnX - 6, buttonY + 8);
-        this.ctx.moveTo(binBtnX + 6, buttonY - 8);
-        this.ctx.lineTo(binBtnX + 6, buttonY + 8);
-        this.ctx.stroke();
-      }
-    });
 
     // Draw players
     this.state.players.forEach(player => {
@@ -575,11 +478,11 @@ export class GameEngine {
   }
 
   private setDefaultPositions(team: 1 | 2) {
-    const fieldLeft = 50 + this.SIDELINE_WIDTH; // Adjusted for wider sidelines
+    const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldTop = 50;
     const fieldMiddle = this.canvas.height / 2;
-    const blueDefaultY = fieldMiddle - (fieldMiddle - fieldTop) / 2; // Blue team default line
+    const blueDefaultY = fieldMiddle - (fieldMiddle - fieldTop) / 2;
 
     // Get existing players for this team
     const teamPlayers = this.state.players.filter(p => p.team === team);
