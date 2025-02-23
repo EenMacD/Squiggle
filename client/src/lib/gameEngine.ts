@@ -78,17 +78,25 @@ export class GameEngine {
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldWidth = fieldRight - fieldLeft;
-    const spacing = fieldWidth / (count + 1); // Even spacing for the new players
 
-    // Y position based on team (attack at bottom, defense at top)
-    const attackY = this.canvas.height - 150; // Bottom half
-    const defenseY = 150; // Top half
-    const y = team === 1 ? attackY : defenseY;
+    // Y positions for rows
+    const attackBaseY = this.canvas.height - 200; // Bottom half base position
+    const defenseBaseY = 150; // Top half base position
+    const rowSpacing = 50; // Vertical space between rows
 
-    // Add players in a row
+    // Calculate rows and positions
+    const playersPerRow = 5;
+    const horizontalSpacing = fieldWidth / 6; // 6 segments for 5 players
+
     for (let i = 0; i < count; i++) {
+      const row = Math.floor((existingTeamPlayers + i) / playersPerRow);
+      const col = (existingTeamPlayers + i) % playersPerRow;
+
       const playerId = `team${team}-${this.state.players.length}`;
-      const x = fieldLeft + spacing * (i + 1); // Evenly space players across field width
+      const x = fieldLeft + horizontalSpacing * (col + 1);
+      const y = team === 1
+        ? attackBaseY + (row * rowSpacing)  // Moving down for attack team
+        : defenseBaseY - (row * rowSpacing); // Moving up for defense team
 
       this.state.players.push({
         id: playerId,
@@ -524,7 +532,8 @@ export class GameEngine {
       const remainingPlayers = playerCount - 6;
       const subsPerRow = 2;
       const rowCount = Math.ceil(remainingPlayers / subsPerRow);
-      const sidelineX = team === 1 ? fieldLeft - 30 : fieldRight + 30; // Position just outside field
+      // Position subs clearly outside touchlines (50 pixels from sideline)
+      const sidelineX = team === 1 ? fieldLeft - 50 : fieldRight + 50;
 
       for (let i = 0; i < remainingPlayers; i++) {
         const row = Math.floor(i / subsPerRow);
