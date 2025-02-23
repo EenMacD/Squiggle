@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, StopCircle } from "lucide-react";
+import { PlayCircle, StopCircle, Camera } from "lucide-react";
 import { useState } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +27,26 @@ export function Controls({ gameEngine }: ControlsProps) {
     queryKey: ["/api/folders"],
   });
 
+  const handleSnapshot = () => {
+    if (!gameEngine) {
+      toast({
+        title: "Error",
+        description: "Game engine not initialized",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Trigger a snapshot manually
+    const event = new KeyboardEvent('keydown', { key: ' ' });
+    document.dispatchEvent(event);
+
+    toast({
+      title: "Snapshot taken",
+      description: "Position snapshot has been recorded"
+    });
+  };
+
   const handleRecordingToggle = () => {
     if (!gameEngine) {
       toast({
@@ -43,7 +63,7 @@ export function Controls({ gameEngine }: ControlsProps) {
     if (newRecordingState) {
       toast({
         title: "Recording started",
-        description: "Position players and press SPACE to take snapshots"
+        description: "Position players and take snapshots"
       });
     } else {
       if (gameEngine.getRecordedKeyFrames().length > 0) {
@@ -137,6 +157,17 @@ export function Controls({ gameEngine }: ControlsProps) {
             </>
           )}
         </Button>
+
+        {isRecording && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleSnapshot}
+          >
+            <Camera className="h-4 w-4 mr-2" />
+            Snapshot
+          </Button>
+        )}
       </div>
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
