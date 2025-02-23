@@ -79,21 +79,21 @@ export class GameEngine {
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldWidth = fieldRight - fieldLeft;
 
-    // Y positions for rows
+    // Y positions for rows with reduced spacing
     const attackBaseY = this.canvas.height - 200; // Bottom half base position
     const defenseBaseY = 150; // Top half base position
-    const rowSpacing = 50; // Vertical space between rows
+    const rowSpacing = 30; // Reduced vertical space between rows
 
     // Calculate rows and positions
     const playersPerRow = 5;
-    const horizontalSpacing = fieldWidth / 6; // 6 segments for 5 players
+    const horizontalSpacing = fieldWidth / 8; // 8 segments for 5 players (closer together)
 
     for (let i = 0; i < count; i++) {
       const row = Math.floor((existingTeamPlayers + i) / playersPerRow);
       const col = (existingTeamPlayers + i) % playersPerRow;
 
       const playerId = `team${team}-${this.state.players.length}`;
-      const x = fieldLeft + horizontalSpacing * (col + 1);
+      const x = fieldLeft + horizontalSpacing * (col + 1.5); // Start from middle segments
       const y = team === 1
         ? attackBaseY + (row * rowSpacing)  // Moving down for attack team
         : defenseBaseY - (row * rowSpacing); // Moving up for defense team
@@ -104,7 +104,7 @@ export class GameEngine {
         position: { x, y }
       });
 
-      // Give ball to center player if it's the first red team player
+      // Give ball to center attacker if it's the first red team player
       if (team === 1 && this.state.players.filter(p => p.team === 1).length === 1) {
         const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
@@ -532,8 +532,8 @@ export class GameEngine {
       const remainingPlayers = playerCount - 6;
       const subsPerRow = 2;
       const rowCount = Math.ceil(remainingPlayers / subsPerRow);
-      // Position subs clearly outside touchlines (50 pixels from sideline)
-      const sidelineX = team === 1 ? fieldLeft - 50 : fieldRight + 50;
+      // Position subs clearly outside touchlines (100 pixels from sideline)
+      const sidelineX = team === 1 ? fieldLeft - 100 : fieldRight + 100;
 
       for (let i = 0; i < remainingPlayers; i++) {
         const row = Math.floor(i / subsPerRow);
