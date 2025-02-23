@@ -37,10 +37,8 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       canvas.width = width;
       canvas.height = height;
 
-      // Initialize game engine and load play
       const engine = new GameEngine(canvas);
 
-      // Load players and initial state from first keyframe
       if (play.keyframes.length > 0) {
         const firstFrame = play.keyframes[0];
         engine.prepareStateForExport(firstFrame);
@@ -82,7 +80,6 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
     engineRef.current.setPlaybackSpeed(speed);
   };
 
-  // Update playback state when playback naturally ends
   useEffect(() => {
     const checkPlaybackStatus = () => {
       if (engineRef.current && !engineRef.current.isPlaybackActive() && isPlaying) {
@@ -111,55 +108,60 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
       });
 
-      // Reset playback to start
-      engineRef.current.resetPlayback();
-
-      // Ensure canvas dimensions are optimal for video export
-      const exportWidth = 1280; // Standard HD width
-      const exportHeight = 960; // Maintain 4:3 aspect ratio
       const originalWidth = canvasRef.current.width;
       const originalHeight = canvasRef.current.height;
-      canvasRef.current.width = exportWidth;
-      canvasRef.current.height = exportHeight;
-      engineRef.current.render(); // Re-render at new size
 
-      // Generate frames
+      const exportWidth = 1280;
+      const exportHeight = 960;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = exportWidth;
+      tempCanvas.height = exportHeight;
+      const tempCtx = tempCanvas.getContext('2d')!;
+
+      engineRef.current.resetPlayback();
+      if (play.keyframes.length > 0) {
+        engineRef.current.prepareStateForExport(play.keyframes[0]);
+      }
+
       const frames: string[] = [];
       for (let i = 0; i < play.keyframes.length; i++) {
         engineRef.current.renderFrame(i);
-        const frameData = canvasRef.current.toDataURL('image/png');
+
+        tempCtx.drawImage(
+          canvasRef.current,
+          0, 0, originalWidth, originalHeight,
+          0, 0, exportWidth, exportHeight
+        );
+
+        const frameData = tempCanvas.toDataURL('image/png');
         const base64Data = frameData.replace(/^data:image\/\w+;base64,/, '');
         const frameName = `frame${i.toString().padStart(4, '0')}.png`;
         await ffmpeg.writeFile(frameName, await fetchFile(new Uint8Array(Buffer.from(base64Data, 'base64'))));
         frames.push(frameName);
       }
 
-      // Generate video from frames using the current playback speed
+      const setptsValue = playbackSpeed >= 1 
+        ? `${1/playbackSpeed}*PTS` 
+        : `${1/playbackSpeed}*PTS`;
+
       await ffmpeg.exec([
         '-framerate', '30',
         '-pattern_type', 'sequence',
         '-i', 'frame%04d.png',
-        '-vf', `setpts=${1/playbackSpeed}*PTS`,
+        '-vf', `setpts=${setptsValue}`,
         '-c:v', 'libx264',
         '-pix_fmt', 'yuv420p',
         'output.mp4'
       ]);
 
-      // Get the video data
       const data = await ffmpeg.readFile('output.mp4');
 
-      // Clean up frames
       for (const frame of frames) {
         await ffmpeg.deleteFile(frame);
       }
       await ffmpeg.deleteFile('output.mp4');
 
-      // Restore original canvas dimensions
-      canvasRef.current.width = originalWidth;
-      canvasRef.current.height = originalHeight;
-      engineRef.current.render();
-
-      // Create download link
       const blob = new Blob([data], { type: 'video/mp4' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -181,7 +183,6 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       });
     } finally {
       setIsExporting(false);
-      // Reset the playback state
       engineRef.current?.resetPlayback();
     }
   };
