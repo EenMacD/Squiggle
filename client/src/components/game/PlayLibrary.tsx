@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Trash2, 
-  FolderPlus, 
   Folder,
   ChevronRight,
   ChevronDown,
@@ -31,13 +30,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useState } from "react";
 
 interface PlayLibraryProps {
@@ -56,34 +48,7 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
   const { toast } = useToast();
   const [playToDelete, setPlayToDelete] = useState<Play | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
-  const [newFolderDialog, setNewFolderDialog] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
-
-  // Create folder mutation
-  const createFolderMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiRequest("POST", "/api/folders", { name });
-      if (!response.ok) throw new Error("Failed to create folder");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
-      toast({
-        title: "Folder created",
-        description: "New folder has been created successfully.",
-      });
-      setNewFolderDialog(false);
-      setNewFolderName("");
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create folder",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Delete folder mutation
   const deleteFolderMutation = useMutation({
@@ -167,11 +132,6 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
     });
   };
 
-  const handleCreateFolder = () => {
-    if (!newFolderName.trim()) return;
-    createFolderMutation.mutate(newFolderName.trim());
-  };
-
   const handleDeleteFolder = () => {
     if (folderToDelete) {
       deleteFolderMutation.mutate(folderToDelete.id);
@@ -200,6 +160,80 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
 
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-2">
+          {/* Folders section first */}
+          {folders.map((folder) => (
+            <div key={folder.id} className="space-y-1">
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={() => toggleFolder(folder.id)}
+                >
+                  {expandedFolders.has(folder.id) ? (
+                    <ChevronDown className="h-4 w-4 mr-2" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 mr-2" />
+                  )}
+                  <Folder className="h-4 w-4 mr-2" />
+                  {folder.name}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem 
+                      className="text-destructive"
+                      onClick={() => setFolderToDelete(folder)}
+                    >
+                      Delete Folder
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Plays in folder */}
+              {expandedFolders.has(folder.id) && (
+                <div className="ml-6 space-y-1">
+                  {plays
+                    .filter(play => play.folderId === folder.id)
+                    .map(play => (
+                      <div key={play.id} className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          className="flex-1 justify-start text-left h-8 px-2"
+                          onClick={() => onPlaySelect(play)}
+                        >
+                          {play.name}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleMovePlay(play, null)}>
+                              Remove from Folder
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => setPlayToDelete(play)}
+                            >
+                              Delete Play
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          ))}
+
           {/* Unorganized plays */}
           <div>
             <h3 className="text-sm font-medium mb-2">Plays</h3>
@@ -241,132 +275,8 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
               ))}
             </div>
           </div>
-
-          {/* Folders section */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium">Folders</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-                onClick={() => setNewFolderDialog(true)}
-              >
-                <FolderPlus className="h-4 w-4 mr-2" />
-                Add Folder
-              </Button>
-            </div>
-            <div className="space-y-1">
-              {folders.map((folder) => (
-                <div key={folder.id} className="space-y-1">
-                  <div className="flex items-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2"
-                      onClick={() => toggleFolder(folder.id)}
-                    >
-                      {expandedFolders.has(folder.id) ? (
-                        <ChevronDown className="h-4 w-4 mr-2" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 mr-2" />
-                      )}
-                      <Folder className="h-4 w-4 mr-2" />
-                      {folder.name}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => setFolderToDelete(folder)}
-                        >
-                          Delete Folder
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {/* Plays in folder */}
-                  {expandedFolders.has(folder.id) && (
-                    <div className="ml-6 space-y-1">
-                      {plays
-                        .filter(play => play.folderId === folder.id)
-                        .map(play => (
-                          <div key={play.id} className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              className="flex-1 justify-start text-left h-8 px-2"
-                              onClick={() => onPlaySelect(play)}
-                            >
-                              {play.name}
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleMovePlay(play, null)}>
-                                  Remove from Folder
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={() => setPlayToDelete(play)}
-                                >
-                                  Delete Play
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </ScrollArea>
-
-      {/* Create Folder Dialog */}
-      <Dialog open={newFolderDialog} onOpenChange={setNewFolderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Folder name"
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setNewFolderDialog(false);
-                setNewFolderName("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleCreateFolder}
-              disabled={createFolderMutation.isPending}
-            >
-              {createFolderMutation.isPending ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Folder Confirmation */}
       <AlertDialog 

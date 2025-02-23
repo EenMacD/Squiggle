@@ -71,26 +71,30 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
             <div className="mt-4 space-y-1">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  showPlayList && "bg-accent"
-                )}
-                onClick={onTogglePlayList}
-              >
-                Play List
-              </Button>
-              {showPlayList && (
+              {/* Play List Directory Option */}
+              <div className="space-y-1">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start pl-8 text-sm"
-                  onClick={() => setNewFolderDialog(true)}
+                  className={cn(
+                    "w-full justify-start",
+                    showPlayList && "bg-accent"
+                  )}
+                  onClick={onTogglePlayList}
                 >
-                  <FolderPlus className="h-4 w-4 mr-2" />
-                  Add Folder
+                  Play List
                 </Button>
-              )}
+                {/* Add Folder Option */}
+                {showPlayList && (
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start pl-8 text-sm"
+                    onClick={() => setNewFolderDialog(true)}
+                  >
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Add Folder
+                  </Button>
+                )}
+              </div>
             </div>
           </SheetContent>
         </Sheet>
