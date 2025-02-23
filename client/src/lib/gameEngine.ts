@@ -41,6 +41,7 @@ export class GameEngine {
   private readonly TOKEN_SPACING = 40;
   private readonly TOKEN_RADIUS = 15;
   private readonly TOKENS_PER_ROW = 5;
+  private readonly SIDELINE_WIDTH = 50; // Increased sideline width
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -423,14 +424,19 @@ export class GameEngine {
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
 
-    // Main field rectangle
-    this.ctx.strokeRect(50, 50, this.canvas.width - 100, this.canvas.height - 100);
+    // Main field rectangle (adjusted for wider sidelines)
+    this.ctx.strokeRect(
+      50 + this.SIDELINE_WIDTH,
+      50,
+      this.canvas.width - 100 - (this.SIDELINE_WIDTH * 2),
+      this.canvas.height - 100
+    );
 
     // Center line
     this.ctx.strokeStyle = 'white';
     this.ctx.beginPath();
-    this.ctx.moveTo(50, this.canvas.height / 2);
-    this.ctx.lineTo(this.canvas.width - 50, this.canvas.height / 2);
+    this.ctx.moveTo(50 + this.SIDELINE_WIDTH, this.canvas.height / 2);
+    this.ctx.lineTo(this.canvas.width - 50 - this.SIDELINE_WIDTH, this.canvas.height / 2);
     this.ctx.stroke();
 
     // Draw token spawners and control buttons
@@ -553,10 +559,11 @@ export class GameEngine {
   }
 
   private setDefaultPositions(team: 1 | 2) {
-    const fieldLeft = 50;
-    const fieldRight = this.canvas.width - 50;
+    const fieldLeft = 50 + this.SIDELINE_WIDTH; // Adjusted for wider sidelines
+    const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldTop = 50;
     const fieldMiddle = this.canvas.height / 2;
+    const blueDefaultY = fieldMiddle - (fieldMiddle - fieldTop) / 2; // Blue team default line
 
     // Get existing players for this team
     const teamPlayers = this.state.players.filter(p => p.team === team);
@@ -581,7 +588,7 @@ export class GameEngine {
         team,
         position: {
           x,
-          y: fieldMiddle
+          y: team === 1 ? fieldMiddle : blueDefaultY // Red on halfway, Blue between halfway and top
         }
       });
 
@@ -590,28 +597,27 @@ export class GameEngine {
         this.state.ball.possessionPlayerId = playerId;
         this.state.ball.position = {
           x: x + 25,
-          y: fieldMiddle - 25
+          y: (team === 1 ? fieldMiddle : blueDefaultY) - 25
         };
       }
     }
 
-    // Place remaining players on sideline in rows of 2
+    // Place remaining players on sideline spread evenly
     if (playerCount > 6) {
       const sidelineX = team === 1 ? 25 : this.canvas.width - 25;
       const remainingPlayers = playerCount - 6;
-      const rows = Math.ceil(remainingPlayers / 2);
+      const sidelineStartY = fieldTop + 100;
+      const sidelineEndY = this.canvas.height - 100;
+      const sidelineHeight = sidelineEndY - sidelineStartY;
+      const verticalSpacing = sidelineHeight / (remainingPlayers + 1);
 
       for (let i = 0; i < remainingPlayers; i++) {
-        const row = Math.floor(i / 2);
-        const col = i % 2;
-        const sidelineSpacing = 40; // Vertical spacing between players
-
         this.state.players.push({
           id: `team${team}-${i + 6}`,
           team,
           position: {
-            x: sidelineX + (col * 30) * (team === 1 ? 1 : -1),
-            y: fieldTop + 50 + (row * sidelineSpacing)
+            x: sidelineX,
+            y: sidelineStartY + verticalSpacing * (i + 1)
           }
         });
       }
