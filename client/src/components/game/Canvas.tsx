@@ -165,7 +165,7 @@ export function Canvas() {
   };
 
   const handleRemovePlayers = () => {
-    if (!gameEngine || removePlayersDialog.count === gameEngine.state.players.filter(p => p.team === removePlayersDialog.team).length) {
+    if (!gameEngine || removePlayersDialog.count === 0) {
       setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
       return;
     }
@@ -269,21 +269,6 @@ export function Canvas() {
             <span className="text-2xl font-bold w-12 text-center">
               {removePlayersDialog.count}
             </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                if (!gameEngine) return;
-                const maxPlayers = gameEngine.state.players.filter(p => p.team === removePlayersDialog.team).length;
-                setRemovePlayersDialog(prev => ({
-                  ...prev,
-                  count: Math.min(maxPlayers, prev.count + 1)
-                }));
-              }}
-              disabled={!gameEngine || removePlayersDialog.count === gameEngine.state.players.filter(p => p.team === removePlayersDialog.team).length}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
           <DialogFooter>
             <Button

@@ -71,9 +71,15 @@ export class GameEngine {
   public spawnTokens(team: 1 | 2, count: number) {
     if (count <= 0) return;
 
+    const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
+    if (existingTeamPlayers + count > 20) {
+      // Limit to 20 players per team
+      count = 20 - existingTeamPlayers;
+      if (count <= 0) return;
+    }
+
     const fieldMiddle = this.canvas.height / 2;
     const startX = team === 1 ? 100 : this.canvas.width - 100;
-    const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
 
     for (let i = 0; i < count; i++) {
       const totalPlayers = existingTeamPlayers + i;
@@ -92,8 +98,8 @@ export class GameEngine {
         position
       });
 
-      // If this is the first player added to the game, give them the ball
-      if (this.state.players.length === 1) {
+      // Only give ball to red team player
+      if (team === 1 && totalPlayers === 0) {
         const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
         this.state.ball.position = {
@@ -114,14 +120,14 @@ export class GameEngine {
     const playersToRemove = teamPlayers.slice(targetCount);
     this.state.players = this.state.players.filter(p => !playersToRemove.includes(p));
 
-    // If a removed player had the ball, give it to the first remaining player
+    // If a removed player had the ball, give it to the first remaining red team player
     if (playersToRemove.some(p => p.id === this.state.ball.possessionPlayerId)) {
-      const remainingPlayer = this.state.players[0];
-      if (remainingPlayer) {
-        this.state.ball.possessionPlayerId = remainingPlayer.id;
+      const redPlayer = this.state.players.find(p => p.team === 1);
+      if (redPlayer) {
+        this.state.ball.possessionPlayerId = redPlayer.id;
         this.state.ball.position = {
-          x: remainingPlayer.position.x + 25,
-          y: remainingPlayer.position.y - 25
+          x: redPlayer.position.x + 25,
+          y: redPlayer.position.y - 25
         };
       } else {
         this.state.ball.possessionPlayerId = null;
@@ -220,14 +226,15 @@ export class GameEngine {
     }
   }
 
-  public stopDragging() {
+  private stopDragging() {
     if (this.state.isDraggingBall) {
       const receivingPlayer = this.findNearestPlayer(
         this.state.ball.position.x,
         this.state.ball.position.y
       );
 
-      if (receivingPlayer && receivingPlayer.id !== this.state.ball.possessionPlayerId) {
+      if (receivingPlayer && receivingPlayer.team === 1) {
+        // Only allow red team to receive the ball
         this.state.ball.possessionPlayerId = receivingPlayer.id;
         const offset = 25;
         this.state.ball.position = {
@@ -239,28 +246,15 @@ export class GameEngine {
           this.recordKeyFrame();
         }
       } else {
-        const possessingPlayer = this.state.players.find(
-          p => p.id === this.state.ball.possessionPlayerId
-        );
-        if (possessingPlayer) {
+        // Return ball to previous red team player
+        const redPlayer = this.state.players.find(p => p.team === 1);
+        if (redPlayer) {
+          this.state.ball.possessionPlayerId = redPlayer.id;
           const offset = 25;
           this.state.ball.position = {
-            x: possessingPlayer.position.x + offset,
-            y: possessingPlayer.position.y - offset
+            x: redPlayer.position.x + offset,
+            y: redPlayer.position.y - offset
           };
-        } else {
-          const nearestPlayer = this.findNearestPlayer(
-            this.state.ball.position.x,
-            this.state.ball.position.y
-          );
-          if (nearestPlayer) {
-            this.state.ball.possessionPlayerId = nearestPlayer.id;
-            const offset = 25;
-            this.state.ball.position = {
-              x: nearestPlayer.position.x + offset,
-              y: nearestPlayer.position.y - offset
-            };
-          }
         }
       }
 
