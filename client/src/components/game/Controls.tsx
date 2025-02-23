@@ -2,12 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlayCircle, StopCircle } from "lucide-react";
 import { useState } from "react";
 import { GameEngine } from "@/lib/gameEngine";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import type { Folder } from "@shared/schema";
 
 interface ControlsProps {
   gameEngine: GameEngine;
@@ -17,7 +20,12 @@ export function Controls({ gameEngine }: ControlsProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [playName, setPlayName] = useState("");
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("");
   const { toast } = useToast();
+
+  const { data: folders } = useQuery<Folder[]>({
+    queryKey: ["/api/folders"],
+  });
 
   const handleRecordingToggle = () => {
     if (!gameEngine) {
@@ -77,6 +85,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       const playData = {
         name: playName,
         category: "default",
+        folderId: selectedFolderId ? parseInt(selectedFolderId) : null,
         keyframes
       };
 
@@ -92,6 +101,7 @@ export function Controls({ gameEngine }: ControlsProps) {
 
       setShowSaveDialog(false);
       setPlayName("");
+      setSelectedFolderId("");
       setIsRecording(false);
     } catch (error) {
       console.error('Save error:', error);
@@ -130,19 +140,41 @@ export function Controls({ gameEngine }: ControlsProps) {
           <DialogHeader>
             <DialogTitle>Save Recorded Play</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="playName">Play Name</Label>
-            <Input
-              id="playName"
-              value={playName}
-              onChange={(e) => setPlayName(e.target.value)}
-              placeholder="Enter a name for this play"
-            />
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="playName">Play Name</Label>
+              <Input
+                id="playName"
+                value={playName}
+                onChange={(e) => setPlayName(e.target.value)}
+                placeholder="Enter a name for this play"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="folder">Folder (Optional)</Label>
+              <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No folder</SelectItem>
+                  {folders?.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id.toString()}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowSaveDialog(false)}
+              onClick={() => {
+                setShowSaveDialog(false);
+                setPlayName("");
+                setSelectedFolderId("");
+              }}
             >
               Cancel
             </Button>
