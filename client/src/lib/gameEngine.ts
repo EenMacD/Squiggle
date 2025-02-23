@@ -84,9 +84,9 @@ export class GameEngine {
     const fieldHeight = fieldBottom - fieldTop;
     const halfwayLine = fieldTop + fieldHeight / 2;
 
-    // Calculate base positions to be centered in respective halves
-    const attackBaseY = halfwayLine + (fieldHeight / 4); // Center in bottom half
-    const defenseBaseY = halfwayLine - (fieldHeight / 4); // Center in top half
+    // Calculate base positions exactly in middle of respective halves
+    const attackBaseY = halfwayLine + (fieldHeight / 4); // Middle of bottom half
+    const defenseBaseY = halfwayLine - (fieldHeight / 4); // Middle of top half
     const spacing = 40; // Base spacing value
 
     // Calculate rows and positions
@@ -100,8 +100,8 @@ export class GameEngine {
       const playerId = `team${team}-${this.state.players.length}`;
       const x = fieldLeft + horizontalSpacing * (col + 2.5); // Center horizontally
       const y = team === 1
-        ? attackBaseY + (row * spacing)  // Moving down for attack team
-        : defenseBaseY - (row * spacing); // Moving up for defense team
+        ? attackBaseY + (row * spacing)  // Moving down from middle of attack half
+        : defenseBaseY - (row * spacing); // Moving up from middle of defense half
 
       this.state.players.push({
         id: playerId,
@@ -503,10 +503,10 @@ export class GameEngine {
 
     // Position first 6 players on field in a line
     const mainLineSpacing = fieldWidth / 7;
-    // Calculate y-position to be centered in respective half
+    // Calculate y-position: halfway line for red team, middle of top half for blue team
     const mainLineY = team === 1
-      ? halfwayLine + (fieldHeight / 4)  // Center in bottom half
-      : halfwayLine - (fieldHeight / 4);  // Center in top half
+      ? halfwayLine  // Red team on halfway line
+      : halfwayLine - (fieldHeight / 4);  // Blue team in middle of their half
 
     const mainLineCount = Math.min(6, playerCount);
     for (let i = 0; i < mainLineCount; i++) {
