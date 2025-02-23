@@ -103,15 +103,6 @@ export function Controls({ gameEngine }: ControlsProps) {
     }
   };
 
-  const handleDefaultPositions = () => {
-    if (!gameEngine) return;
-    gameEngine.setDefaultPositions();
-    toast({
-      title: "Default Positions",
-      description: "Players have been arranged in their default positions"
-    });
-  };
-
   return (
     <>
       <div className="flex gap-4 items-center bg-background rounded-lg p-2 shadow-lg">
@@ -132,14 +123,6 @@ export function Controls({ gameEngine }: ControlsProps) {
             </>
           )}
         </Button>
-        {gameEngine.state.players.length > 0 && (
-          <Button
-            variant="outline"
-            onClick={handleDefaultPositions}
-          >
-            Default Positions
-          </Button>
-        )}
       </div>
 
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>

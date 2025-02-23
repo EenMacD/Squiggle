@@ -105,10 +105,27 @@ export class GameEngine {
   }
 
   public startDragging(x: number, y: number) {
+    // Check for default position button clicks
+    const bottomY = this.canvas.height - 50;
+    [1, 2].forEach(team => {
+      const isTeam1 = team === 1;
+      const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
+      const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
+
+      // Only check for button click if there are players for this team
+      if (this.state.players.filter(p => p.team === team).length > 0) {
+        if (x >= defaultBtnX - 40 && x <= defaultBtnX + 40 &&
+            y >= bottomY - 15 && y <= bottomY + 15) {
+          this.setDefaultPositions();
+          return;
+        }
+      }
+    });
+
     // Check if we're clicking on the ball
     if (this.checkBallClick(x, y)) return;
 
-    // If not clicking on ball, try to select a player
+    // If not clicking on ball or buttons, try to select a player
     const clickedPlayer = this.findNearestPlayer(x, y);
     if (clickedPlayer) {
       this.state.selectedPlayer = clickedPlayer.id;
@@ -377,15 +394,17 @@ export class GameEngine {
     this.ctx.lineTo(this.canvas.width - 50, this.canvas.height / 2);
     this.ctx.stroke();
 
-    // Draw token spawners at the bottom
+    // Draw token spawners and default position buttons at the bottom
     [1, 2].forEach(team => {
-      const x = team === 1 ? 50 : this.canvas.width - 50;
+      const isTeam1 = team === 1;
+      const x = isTeam1 ? 50 : this.canvas.width - 50;
+      const defaultBtnX = isTeam1 ? x + 90 : x - 90;
       const y = this.canvas.height - 50;
 
-      // Draw token
+      // Draw token spawner
       this.ctx.beginPath();
       this.ctx.arc(x, y, this.TOKEN_RADIUS, 0, Math.PI * 2);
-      this.ctx.fillStyle = team === 1 ? 'red' : 'blue';
+      this.ctx.fillStyle = isTeam1 ? 'red' : 'blue';
       this.ctx.fill();
 
       // Draw + symbol
@@ -397,6 +416,22 @@ export class GameEngine {
       this.ctx.moveTo(x, y - 5);
       this.ctx.lineTo(x, y + 5);
       this.ctx.stroke();
+
+      // Draw default position button if there are players
+      if (this.state.players.filter(p => p.team === team).length > 0) {
+        this.ctx.fillStyle = isTeam1 ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
+        this.ctx.beginPath();
+        this.ctx.roundRect(defaultBtnX - 40, y - 15, 80, 30, 5);
+        this.ctx.fill();
+        this.ctx.strokeStyle = 'white';
+        this.ctx.strokeRect(defaultBtnX - 40, y - 15, 80, 30);
+
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('Default', defaultBtnX, y);
+      }
     });
 
     // Draw players
