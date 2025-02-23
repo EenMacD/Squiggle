@@ -453,4 +453,54 @@ export class GameEngine {
   public isRecording(): boolean {
     return this.state.isRecording;
   }
+
+  public setDefaultPositions() {
+    // Clear existing players
+    this.state.players = [];
+
+    // Field dimensions (accounting for margins)
+    const fieldLeft = 50;
+    const fieldRight = this.canvas.width - 50;
+    const fieldTop = 50;
+    const fieldMiddle = this.canvas.height / 2;
+    const defenseLineY = fieldMiddle - (fieldMiddle - fieldTop) / 2;
+    const spacing = (fieldRight - fieldLeft) / 7; // Divide field into 7 sections for 6 players
+
+    // Add red team (attack) along the middle line
+    for (let i = 0; i < 6; i++) {
+      const x = fieldLeft + spacing + (i * spacing);
+      const playerId = `team1-${i}`;
+      this.state.players.push({
+        id: playerId,
+        team: 1,
+        position: {
+          x,
+          y: fieldMiddle
+        }
+      });
+
+      // Give the ball to the third player (index 2)
+      if (i === 2) {
+        this.state.ball.possessionPlayerId = playerId;
+        this.state.ball.position = {
+          x: x + 25,
+          y: fieldMiddle - 25
+        };
+      }
+    }
+
+    // Add blue team (defense) between middle and top
+    for (let i = 0; i < 6; i++) {
+      this.state.players.push({
+        id: `team2-${i}`,
+        team: 2,
+        position: {
+          x: fieldLeft + spacing + (i * spacing),
+          y: defenseLineY
+        }
+      });
+    }
+
+    this.render();
+  }
 }
