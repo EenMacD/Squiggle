@@ -108,25 +108,25 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
               1x
             </Button>
             <Button
-              variant={playbackSpeed === 0.5 ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => changeSpeed(0.5)}
-            >
-              0.5x
-            </Button>
-            <Button
-              variant={playbackSpeed === 0.25 ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => changeSpeed(0.25)}
-            >
-              0.25x
-            </Button>
-            <Button
               variant={playbackSpeed === 0.1 ? "secondary" : "ghost"}
               size="sm"
               onClick={() => changeSpeed(0.1)}
             >
               0.1x
+            </Button>
+            <Button
+              variant={playbackSpeed === 0.01 ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => changeSpeed(0.01)}
+            >
+              0.01x
+            </Button>
+            <Button
+              variant={playbackSpeed === 0.001 ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => changeSpeed(0.001)}
+            >
+              0.001x
             </Button>
           </div>
         </div>
