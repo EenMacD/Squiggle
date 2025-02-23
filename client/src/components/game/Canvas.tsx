@@ -4,7 +4,7 @@ import { Controls } from "./Controls";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, Camera, StopCircle, PlayCircle } from "lucide-react";
+import { Plus, Minus, Trash2 } from "lucide-react";
 
 interface TokenDialogState {
   isOpen: boolean;
@@ -31,8 +31,6 @@ export function Canvas() {
     isOpen: false,
     team: 1
   });
-  const [isRecording, setIsRecording] = useState(false);
-  const [snapshotCount, setSnapshotCount] = useState(0);
 
   useEffect(() => {
     if (canvasRef.current && containerRef.current) {
@@ -62,7 +60,6 @@ export function Canvas() {
       if (e.code === 'Space' && gameEngine.isRecording()) {
         e.preventDefault();
         gameEngine.takeSnapshot();
-        setSnapshotCount(prev => prev + 1);
         toast({
           title: "Snapshot taken",
           description: "Player positions have been recorded"
@@ -170,21 +167,6 @@ export function Canvas() {
     setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleRecordingToggle = () => {
-    setIsRecording(!isRecording);
-    if (gameEngine) {
-      gameEngine.toggleRecording();
-    }
-  };
-
-  const handleSnapshot = () => {
-    if (gameEngine && gameEngine.isRecording()) {
-      gameEngine.takeSnapshot();
-      setSnapshotCount(prev => prev + 1);
-      toast({ title: "Snapshot taken", description: "Player positions have been recorded" });
-    }
-  };
-
   return (
     <div className="h-full flex flex-col gap-2 bg-black" ref={containerRef}>
       <div className="relative flex-1 flex items-center justify-center">
@@ -202,41 +184,10 @@ export function Canvas() {
       <div className="flex flex-col gap-2 items-center py-2">
         {gameEngine && (
           <>
-            {isRecording && (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleSnapshot}
-                className="w-full"
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                Snapshot ({snapshotCount})
-              </Button>
-            )}
-
-            <Button
-              variant={isRecording ? "destructive" : "default"}
-              size="lg"
-              onClick={handleRecordingToggle}
-              className="w-full"
-            >
-              {isRecording ? (
-                <>
-                  <StopCircle className="h-4 w-4 mr-2" />
-                  Stop Recording
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  Start Recording
-                </>
-              )}
-            </Button>
             {/* Team Management Buttons Row */}
             <div className="flex gap-4 w-full justify-center">
               {/* Red Team (Attack) Controls */}
               <div className="flex flex-col gap-2 items-center">
-                {/* Default Positions and Remove Players buttons appear when team has players */}
                 {gameEngine.state.players.some(p => p.team === 1) && (
                   <div className="flex gap-2">
                     <Button
@@ -269,7 +220,6 @@ export function Canvas() {
 
               {/* Blue Team (Defence) Controls */}
               <div className="flex flex-col gap-2 items-center">
-                {/* Default Positions and Remove Players buttons appear when team has players */}
                 {gameEngine.state.players.some(p => p.team === 2) && (
                   <div className="flex gap-2">
                     <Button
