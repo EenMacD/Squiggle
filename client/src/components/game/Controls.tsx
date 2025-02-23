@@ -32,11 +32,8 @@ export function Controls({ gameEngine }: ControlsProps) {
   const [showNoPlayersWarning, setShowNoPlayersWarning] = useState(false);
   const [playName, setPlayName] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
+  const [snapshotCount, setSnapshotCount] = useState(0);
   const { toast } = useToast();
-
-  const { data: folders } = useQuery<Folder[]>({
-    queryKey: ["/api/folders"],
-  });
 
   const handleSnapshot = () => {
     if (!gameEngine) {
@@ -52,15 +49,17 @@ export function Controls({ gameEngine }: ControlsProps) {
     const event = new KeyboardEvent('keydown', { key: ' ' });
     document.dispatchEvent(event);
 
+    setSnapshotCount(prev => prev + 1);
     toast({
       title: "Snapshot taken",
-      description: "Position snapshot has been recorded"
+      description: `Position snapshot #${snapshotCount + 1} has been recorded`
     });
   };
 
   const startRecording = () => {
     const newRecordingState = gameEngine.toggleRecording();
     setIsRecording(newRecordingState);
+    setSnapshotCount(0);
 
     if (newRecordingState) {
       toast({
@@ -85,7 +84,7 @@ export function Controls({ gameEngine }: ControlsProps) {
       const newRecordingState = gameEngine.toggleRecording();
       setIsRecording(newRecordingState);
 
-      if (gameEngine.getRecordedKeyFrames().length > 0) {
+      if (snapshotCount > 0) {
         setShowSaveDialog(true);
       } else {
         toast({
@@ -108,6 +107,10 @@ export function Controls({ gameEngine }: ControlsProps) {
     // Start recording if we have players
     startRecording();
   };
+
+  const { data: folders } = useQuery<Folder[]>({
+    queryKey: ["/api/folders"],
+  });
 
   const handleSavePlay = async () => {
     if (!gameEngine || !playName.trim()) {
@@ -167,37 +170,37 @@ export function Controls({ gameEngine }: ControlsProps) {
   };
 
   return (
-    <>
-      <div className="flex gap-4 items-center bg-background rounded-lg p-2 shadow-lg">
+    <div className="flex flex-col gap-2 items-center">
+      {isRecording && (
         <Button
-          variant={isRecording ? "destructive" : "default"}
+          variant="outline"
           size="lg"
-          onClick={handleRecordingToggle}
+          onClick={handleSnapshot}
+          className="w-full"
         >
-          {isRecording ? (
-            <>
-              <StopCircle className="h-4 w-4 mr-2" />
-              Stop Recording
-            </>
-          ) : (
-            <>
-              <PlayCircle className="h-4 w-4 mr-2" />
-              Start Recording
-            </>
-          )}
+          <Camera className="h-4 w-4 mr-2" />
+          Snapshot ({snapshotCount})
         </Button>
+      )}
 
-        {isRecording && (
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleSnapshot}
-          >
-            <Camera className="h-4 w-4 mr-2" />
-            Snapshot
-          </Button>
+      <Button
+        variant={isRecording ? "destructive" : "default"}
+        size="lg"
+        onClick={handleRecordingToggle}
+        className="w-full"
+      >
+        {isRecording ? (
+          <>
+            <StopCircle className="h-4 w-4 mr-2" />
+            Stop Recording
+          </>
+        ) : (
+          <>
+            <PlayCircle className="h-4 w-4 mr-2" />
+            Start Recording
+          </>
         )}
-      </div>
+      </Button>
 
       {/* No Players Warning Dialog */}
       <AlertDialog
@@ -213,16 +216,16 @@ export function Controls({ gameEngine }: ControlsProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  setShowNoPlayersWarning(false);
-                  startRecording();
-                }}
-              >
-                Continue Anyway
-              </AlertDialogAction>
-            </AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowNoPlayersWarning(false);
+                startRecording();
+              }}
+            >
+              Continue Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -279,6 +282,6 @@ export function Controls({ gameEngine }: ControlsProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

@@ -73,13 +73,16 @@ export class GameEngine {
 
     const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
     if (existingTeamPlayers + count > 20) {
-      // Limit to 20 players per team
       count = 20 - existingTeamPlayers;
       if (count <= 0) return;
     }
 
+    const fieldLeft = 50 + this.SIDELINE_WIDTH;
+    const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldMiddle = this.canvas.height / 2;
-    const startX = team === 1 ? 100 : this.canvas.width - 100;
+
+    // Start position adjusted to be within field lines
+    const startX = team === 1 ? fieldLeft + 100 : fieldRight - 100;
 
     // First check if this is the first red team player being added
     const isFirstRedPlayer = team === 1 && this.state.players.filter(p => p.team === 1).length === 0;
@@ -92,7 +95,7 @@ export class GameEngine {
       const playerId = `team${team}-${this.state.players.length}`;
       const position = {
         x: startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
-        y: fieldMiddle + (row * this.TOKEN_SPACING)
+        y: Math.min(this.canvas.height - 100, Math.max(50, fieldMiddle + (row * this.TOKEN_SPACING)))
       };
 
       this.state.players.push({
@@ -101,13 +104,13 @@ export class GameEngine {
         position
       });
 
-      // Give ball to first red team player only if it's the first one being added
+      // Give ball to first red team player
       if (isFirstRedPlayer && i === 0) {
         const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
         this.state.ball.position = {
-          x: position.x + offset,
-          y: position.y - offset
+          x: Math.min(fieldRight - offset, position.x + offset),
+          y: Math.max(50 + offset, position.y - offset)
         };
       }
     }
@@ -211,8 +214,18 @@ export class GameEngine {
   }
 
   public updateDragPosition(x: number, y: number) {
+    // Field boundaries (adjusted for wider sidelines)
+    const fieldLeft = 50 + this.SIDELINE_WIDTH;
+    const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
+    const fieldTop = 50;
+    const fieldBottom = this.canvas.height - 100;
+
+    // Constrain coordinates within field boundaries
+    const constrainedX = Math.max(fieldLeft + this.TOKEN_RADIUS, Math.min(fieldRight - this.TOKEN_RADIUS, x));
+    const constrainedY = Math.max(fieldTop + this.TOKEN_RADIUS, Math.min(fieldBottom - this.TOKEN_RADIUS, y));
+
     if (this.state.isDraggingBall) {
-      this.state.ball.position = { x, y };
+      this.state.ball.position = { x: constrainedX, y: constrainedY };
       this.render();
       return;
     }
@@ -220,13 +233,13 @@ export class GameEngine {
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
-        player.position = { x, y };
+        player.position = { x: constrainedX, y: constrainedY };
 
         if (this.state.ball.possessionPlayerId === player.id) {
           const offset = 25;
           this.state.ball.position = {
-            x: player.position.x + offset,
-            y: player.position.y - offset
+            x: Math.min(fieldRight - offset, player.position.x + offset),
+            y: Math.max(fieldTop + offset, player.position.y - offset)
           };
         }
 

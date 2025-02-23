@@ -4,7 +4,7 @@ import { Controls } from "./Controls";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, Trash2 } from "lucide-react";
 
 interface TokenDialogState {
   isOpen: boolean;
@@ -12,7 +12,6 @@ interface TokenDialogState {
   count: number;
 }
 
-// Update RemovePlayersDialog interface
 interface RemovePlayersDialogState {
   isOpen: boolean;
   team: 1 | 2;
@@ -39,12 +38,10 @@ export function Canvas() {
       const canvas = canvasRef.current;
       const aspectRatio = 4/3;
 
-      // Calculate maximum possible width while maintaining aspect ratio
-      const maxWidth = container.clientWidth - 32; // Account for padding
-      const maxHeight = (container.clientHeight - 140) * 0.9; // Account for controls and padding
+      const maxWidth = container.clientWidth - 32;
+      const maxHeight = (container.clientHeight - 140) * 0.9;
       const widthFromHeight = maxHeight * aspectRatio;
 
-      // Use the smaller of the two possible dimensions
       const width = Math.min(maxWidth, widthFromHeight);
       const height = width / aspectRatio;
 
@@ -182,12 +179,82 @@ export function Canvas() {
           onMouseLeave={handleMouseLeave}
         />
       </div>
-      <div className="flex justify-center gap-4 py-2">
+
+      {/* Updated Controls Layout */}
+      <div className="flex flex-col gap-2 items-center py-2">
         {gameEngine && (
-          <Controls gameEngine={gameEngine} />
+          <>
+            {/* Team Management Buttons Row */}
+            <div className="flex gap-4 w-full justify-center">
+              {/* Red Team (Attack) Controls */}
+              <div className="flex flex-col gap-2 items-center">
+                {/* Default Positions and Remove Players buttons appear when team has players */}
+                {gameEngine.state.players.some(p => p.team === 1) && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => gameEngine.setDefaultPositions(1)}
+                    >
+                      Default Positions
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setRemovePlayersDialog({ isOpen: true, team: 1 })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  variant="destructive"
+                  className="w-32"
+                  onClick={() => setTokenDialog({ isOpen: true, team: 1, count: 0 })}
+                >
+                  Add Attack
+                </Button>
+              </div>
+
+              {/* Recording Controls */}
+              <Controls gameEngine={gameEngine} />
+
+              {/* Blue Team (Defence) Controls */}
+              <div className="flex flex-col gap-2 items-center">
+                {/* Default Positions and Remove Players buttons appear when team has players */}
+                {gameEngine.state.players.some(p => p.team === 2) && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => gameEngine.setDefaultPositions(2)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Default Positions
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setRemovePlayersDialog({ isOpen: true, team: 2 })}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  className="w-32 bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => setTokenDialog({ isOpen: true, team: 2, count: 0 })}
+                >
+                  Add Defence
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
+      {/* Token Dialog */}
       <Dialog 
         open={tokenDialog.isOpen} 
         onOpenChange={(open) => setTokenDialog(prev => ({ ...prev, isOpen: open }))}
@@ -195,7 +262,7 @@ export function Canvas() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Add {tokenDialog.team === 1 ? "Red" : "Blue"} Players
+              Add {tokenDialog.team === 1 ? "Attack" : "Defence"} Players
             </DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center gap-4 py-4">
@@ -232,7 +299,10 @@ export function Canvas() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSpawnTokens}>
+            <Button 
+              onClick={handleSpawnTokens}
+              className={tokenDialog.team === 1 ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
+            >
               Add Players
             </Button>
           </DialogFooter>
@@ -247,7 +317,7 @@ export function Canvas() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Remove {removePlayersDialog.team === 1 ? "Red" : "Blue"} Players
+              Remove {removePlayersDialog.team === 1 ? "Attack" : "Defence"} Players
             </DialogTitle>
           </DialogHeader>
           <div className="py-4 text-center">
