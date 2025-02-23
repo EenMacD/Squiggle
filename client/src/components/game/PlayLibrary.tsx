@@ -6,8 +6,6 @@ import type { Play, Folder as FolderType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-//import { FFmpeg } from '@ffmpeg/ffmpeg'; // Removed FFmpeg import
-//import { fetchFile, toBlobURL } from '@ffmpeg/util'; // Removed FFmpeg util imports
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,12 +105,16 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
     setIsExporting(true);
     setExportProgress(0);
     try {
+      // Get dimensions from the first keyframe
+      const originalDimensions = play.keyframes[0]?.dimensions;
+      if (!originalDimensions) {
+        throw new Error('Play dimensions not found');
+      }
+
       // Create a temporary canvas for rendering
       const canvas = document.createElement('canvas');
-      const aspectRatio = 4/3;
-      // Reduce canvas size for faster processing
-      canvas.width = 640; // Even smaller for better performance
-      canvas.height = canvas.width / aspectRatio;
+      canvas.width = originalDimensions.width;
+      canvas.height = originalDimensions.height;
 
       // Initialize game engine with the temp canvas
       const engine = new GameEngine(canvas);
@@ -125,10 +127,10 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       });
 
       // Create a MediaRecorder with optimized settings
-      const stream = canvas.captureStream(24); // Reduced to 24fps for better performance
+      const stream = canvas.captureStream(24);
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8',
-        videoBitsPerSecond: 1500000 // 1.5 Mbps for better compression
+        videoBitsPerSecond: 1500000
       });
 
       const chunks: Blob[] = [];
@@ -171,7 +173,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       setExportProgress(0);
       toast({
         title: "Export failed",
-        description: error instanceof Error ? error.message : "Failed to export the play animation. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to export play",
         variant: "destructive"
       });
     }
@@ -215,7 +217,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
                     disabled={isExporting}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    {isExporting ? `Exporting (${exportProgress}%)...` : "Download WebM"} {/* Changed to Download WebM */}
+                    {isExporting ? `Exporting (${exportProgress}%)...` : "Download WebM"}
                   </DropdownMenuItem>
                   {folders?.filter(f => f.id !== folderId).map(folder => (
                     <DropdownMenuItem

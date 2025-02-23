@@ -3,6 +3,11 @@ export interface Position {
   y: number;
 }
 
+export interface CanvasDimensions {
+  width: number;
+  height: number;
+}
+
 export interface Player {
   id: string;
   team: 1 | 2;
@@ -23,6 +28,7 @@ export interface GameState {
     timestamp: number;
     positions: Record<string, Position>;
     ball: BallState;
+    dimensions?: CanvasDimensions;  // Add dimensions to keyframes
   }>;
   ball: BallState;
   isDraggingBall: boolean;
@@ -319,7 +325,11 @@ export class GameEngine {
     this.state.keyFrames.push({
       timestamp: Date.now(),
       positions,
-      ball: { ...this.state.ball }
+      ball: { ...this.state.ball },
+      dimensions: {
+        width: this.canvas.width,
+        height: this.canvas.height
+      }
     });
   }
 
@@ -330,10 +340,15 @@ export class GameEngine {
       positions[player.id] = { ...player.position };
     });
 
+    // Store canvas dimensions with each keyframe
     this.state.keyFrames.push({
       timestamp: Date.now(),
       positions,
-      ball: { ...this.state.ball }
+      ball: { ...this.state.ball },
+      dimensions: {
+        width: this.canvas.width,
+        height: this.canvas.height
+      }
     });
   }
 
@@ -341,13 +356,17 @@ export class GameEngine {
     return this.state.keyFrames;
   }
 
-  public loadPlay(play: { keyframes: Array<{ timestamp: number; positions: Record<string, Position>; ball: BallState }> }) {
+  public loadPlay(play: { keyframes: Array<{ timestamp: number; positions: Record<string, Position>; ball: BallState; dimensions?: CanvasDimensions }> }) {
     this.state.keyFrames = play.keyframes;
     this.currentKeyFrameIndex = 0;
 
-    // Initialize state from first keyframe
+    // Get dimensions from first keyframe if available
     if (this.state.keyFrames.length > 0) {
       const firstFrame = this.state.keyFrames[0];
+      if (firstFrame.dimensions) {
+        this.canvas.width = firstFrame.dimensions.width;
+        this.canvas.height = firstFrame.dimensions.height;
+      }
 
       // Initialize players with proper team assignments and numbers
       this.state.players = Object.entries(firstFrame.positions).map(([id, position]) => {
@@ -360,16 +379,12 @@ export class GameEngine {
         };
       });
 
-      // Set initial ball state
       this.state.ball = { ...firstFrame.ball };
-
-      // Reset interaction states
       this.state.selectedPlayer = null;
       this.state.isDraggingBall = false;
       this.state.isBallSelected = false;
     }
 
-    // Render initial state
     this.render();
   }
 
