@@ -33,44 +33,74 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       canvas.width = width;
       canvas.height = height;
 
-      engineRef.current = new GameEngine(canvas);
-      engineRef.current.loadPlay(play);
+      // Initialize game engine and load play
+      const engine = new GameEngine(canvas);
+
+      // Load players and initial state from first keyframe
+      if (play.keyframes.length > 0) {
+        const firstFrame = play.keyframes[0];
+        const players = Object.entries(firstFrame.positions).map(([id, position]) => ({
+          id,
+          team: parseInt(id.split('-')[0].replace('team', '')),
+          position,
+          number: parseInt(id.split('-')[1]) + 1
+        }));
+
+        // Set initial state
+        engine.state.players = players;
+        engine.state.ball = firstFrame.ball;
+      }
+
+      engine.loadPlay(play);
+      engineRef.current = engine;
     }
 
     return () => {
-      if (isPlaying) {
-        engineRef.current?.pausePlayback();
+      if (engineRef.current) {
+        engineRef.current.pausePlayback();
       }
     };
   }, [play]);
 
   const togglePlayback = () => {
+    if (!engineRef.current) return;
+
     setIsPlaying(!isPlaying);
-    if (engineRef.current) {
-      if (!isPlaying) {
-        engineRef.current.startPlayback();
-      } else {
-        engineRef.current.pausePlayback();
-      }
+    if (!isPlaying) {
+      engineRef.current.startPlayback();
+    } else {
+      engineRef.current.pausePlayback();
     }
   };
 
   const resetPlayback = () => {
-    if (engineRef.current) {
-      engineRef.current.resetPlayback();
-      setIsPlaying(false);
-    }
+    if (!engineRef.current) return;
+
+    engineRef.current.resetPlayback();
+    setIsPlaying(false);
   };
 
   const changeSpeed = (speed: number) => {
+    if (!engineRef.current) return;
+
     setPlaybackSpeed(speed);
-    if (engineRef.current) {
-      engineRef.current.setPlaybackSpeed(speed);
-    }
+    engineRef.current.setPlaybackSpeed(speed);
   };
 
+  // Update playback state when playback naturally ends
+  useEffect(() => {
+    const checkPlaybackStatus = () => {
+      if (engineRef.current && !engineRef.current.isPlaybackActive() && isPlaying) {
+        setIsPlaying(false);
+      }
+    };
+
+    const interval = setInterval(checkPlaybackStatus, 100);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
   return (
-    <div className="relative flex flex-col gap-4" ref={containerRef}>
+    <div className="relative flex flex-col gap-4 h-full bg-black" ref={containerRef}>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">{play.name}</h2>
         <Button 
@@ -82,10 +112,10 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         </Button>
       </div>
 
-      <div className="relative flex-1">
+      <div className="relative flex-1 flex items-center justify-center">
         <canvas
           ref={canvasRef}
-          className="w-full border border-border rounded-lg"
+          className="border border-border rounded-lg"
         />
 
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 items-center">
