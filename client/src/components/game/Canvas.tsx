@@ -14,6 +14,7 @@ interface TokenDialogState {
 
 export function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [gameEngine, setGameEngine] = useState<GameEngine | null>(null);
   const { toast } = useToast();
   const [tokenDialog, setTokenDialog] = useState<TokenDialogState>({
@@ -23,11 +24,22 @@ export function Canvas() {
   });
 
   useEffect(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && containerRef.current) {
+      const container = containerRef.current;
       const canvas = canvasRef.current;
       const aspectRatio = 4/3;
-      canvas.width = 1200;
-      canvas.height = canvas.width / aspectRatio;
+
+      // Calculate maximum possible width while maintaining aspect ratio
+      const maxWidth = container.clientWidth - 32; // Account for padding
+      const maxHeight = (container.clientHeight - 140) * 0.9; // Account for controls and padding
+      const widthFromHeight = maxHeight * aspectRatio;
+
+      // Use the smaller of the two possible dimensions
+      const width = Math.min(maxWidth, widthFromHeight);
+      const height = width / aspectRatio;
+
+      canvas.width = width;
+      canvas.height = height;
 
       const engine = new GameEngine(canvas);
       setGameEngine(engine);
@@ -116,18 +128,18 @@ export function Canvas() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="relative">
+    <div className="h-full flex flex-col gap-2" ref={containerRef}>
+      <div className="relative flex-1 flex items-center justify-center">
         <canvas
           ref={canvasRef}
-          className="w-full border border-border rounded-lg bg-black"
+          className="border border-border rounded-lg bg-black"
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleMouseLeave}
         />
       </div>
-      <div className="flex justify-center mt-4 gap-4">
+      <div className="flex justify-center gap-4 py-2">
         {gameEngine && (
           <Controls gameEngine={gameEngine} />
         )}

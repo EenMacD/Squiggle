@@ -15,7 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 
@@ -65,15 +64,15 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <h2 className="text-xl font-bold mb-4">Play Library</h2>
-      <ScrollArea className="flex-1">
-        <div className="space-y-2">
+    <div className="h-full flex flex-col gap-2">
+      <h2 className="text-lg font-semibold">Play Library</h2>
+      <ScrollArea className="flex-1 h-[calc(100vh-6rem)]">
+        <div className="space-y-1 pr-2">
           {plays?.map((play) => (
-            <div key={play.id} className="flex items-center gap-2">
+            <div key={play.id} className="flex items-center gap-1">
               <Button
                 variant="ghost"
-                className="flex-1 justify-start text-left"
+                className="flex-1 justify-start text-left h-8 px-2"
                 onClick={() => onPlaySelect(play)}
               >
                 {play.name}
@@ -81,7 +80,7 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-destructive hover:text-destructive"
+                className="h-8 w-8 text-destructive hover:text-destructive"
                 onClick={() => handleDelete(play)}
               >
                 <Trash2 className="h-4 w-4" />

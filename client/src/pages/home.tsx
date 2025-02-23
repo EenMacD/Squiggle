@@ -8,21 +8,19 @@ export default function Home() {
   const [selectedPlay, setSelectedPlay] = useState<Play | null>(null);
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <div className="w-64 border-r border-border p-4">
+    <div className="h-screen bg-background flex overflow-hidden">
+      <div className="w-64 border-r border-border p-2">
         <PlayLibrary onPlaySelect={setSelectedPlay} />
       </div>
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 p-4">
-          {selectedPlay ? (
-            <PlaybackView 
-              play={selectedPlay} 
-              onClose={() => setSelectedPlay(null)} 
-            />
-          ) : (
-            <Canvas />
-          )}
-        </div>
+      <div className="flex-1 flex flex-col p-2">
+        {selectedPlay ? (
+          <PlaybackView 
+            play={selectedPlay} 
+            onClose={() => setSelectedPlay(null)} 
+          />
+        ) : (
+          <Canvas />
+        )}
       </div>
     </div>
   );
