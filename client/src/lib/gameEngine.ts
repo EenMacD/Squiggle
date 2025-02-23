@@ -468,10 +468,10 @@ export class GameEngine {
       if (player.number !== undefined) {
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillStyle = 'white';
+        this.ctx.fillStyle = 'black';
         const numberY = player.team === 1
-          ? player.position.y + this.TOKEN_RADIUS + 4  // Just below red players
-          : player.position.y - this.TOKEN_RADIUS - 4;  // Just above blue players
+          ? player.position.y + this.TOKEN_RADIUS + 15  // Further below red players
+          : player.position.y - this.TOKEN_RADIUS - 15;  // Further above blue players
         this.ctx.fillText(player.number.toString(), player.position.x, numberY);
       }
     });

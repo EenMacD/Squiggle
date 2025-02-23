@@ -101,8 +101,8 @@ export function Canvas() {
     // Check for player number click
     const clickedPlayer = gameEngine.state.players.find(player => {
       const numberY = player.team === 1 
-        ? player.position.y + 15 + 4  // Just below red players
-        : player.position.y - 15 - 4;  // Just above blue players
+        ? player.position.y + this.TOKEN_RADIUS + 15  // Further below red players
+        : player.position.y - this.TOKEN_RADIUS - 15;  // Further above blue players
       const dx = x - player.position.x;
       const dy = y - numberY;
       return Math.sqrt(dx * dx + dy * dy) < 10;  // Small click area for numbers

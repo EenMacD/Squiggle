@@ -184,10 +184,10 @@ export function Controls({ gameEngine }: ControlsProps) {
       )}
 
       <Button
-        variant={isRecording ? "destructive" : "default"}
+        variant={isRecording ? "outline" : "default"}
         size="lg"
         onClick={handleRecordingToggle}
-        className="w-full"
+        className={`w-full ${isRecording ? "bg-white text-black hover:bg-white/90" : ""}`}
       >
         {isRecording ? (
           <>
