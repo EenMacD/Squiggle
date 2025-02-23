@@ -40,7 +40,7 @@ export class GameEngine {
   private lastFrameTime: number = 0;
   private readonly TOKEN_RADIUS = 15;
   private readonly SIDELINE_WIDTH = 50;
-  private readonly BALL_RADIUS = 15; // Reduced from 20
+  private readonly BALL_RADIUS = 10; // Reduced size for better centering
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -72,7 +72,7 @@ export class GameEngine {
 
     const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
     if (existingTeamPlayers + count > 20) {
-      count = 20 - existingTeamPlayers; // Allow up to 20 players per team
+      count = 20 - existingTeamPlayers;
       if (count <= 0) return;
     }
 
@@ -80,24 +80,24 @@ export class GameEngine {
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldWidth = fieldRight - fieldLeft;
 
-    // Y positions for rows with reduced spacing
-    const attackBaseY = this.canvas.height - 200; // Bottom half base position
-    const defenseBaseY = 150; // Top half base position
-    const rowSpacing = 25; // Reduced vertical space between rows
+    // Adjust spacing for more vertical space but tighter horizontal
+    const attackBaseY = this.canvas.height - 250; // More space from bottom
+    const defenseBaseY = 200; // More space from top
+    const spacing = 40; // Equal spacing for both directions initially
 
     // Calculate rows and positions
     const playersPerRow = 5;
-    const horizontalSpacing = fieldWidth / 10; // 10 segments for 5 players (very close together)
+    const horizontalSpacing = spacing * 0.8; // Slightly tighter horizontal spacing
 
     for (let i = 0; i < count; i++) {
       const row = Math.floor((existingTeamPlayers + i) / playersPerRow);
       const col = (existingTeamPlayers + i) % playersPerRow;
 
       const playerId = `team${team}-${this.state.players.length}`;
-      const x = fieldLeft + horizontalSpacing * (col + 2.5); // Start from middle segments
+      const x = fieldLeft + horizontalSpacing * (col + 2.5); // Center horizontally
       const y = team === 1
-        ? attackBaseY + (row * rowSpacing)  // Moving down for attack team
-        : defenseBaseY - (row * rowSpacing); // Moving up for defense team
+        ? attackBaseY + (row * spacing)  // Moving down for attack team
+        : defenseBaseY - (row * spacing); // Moving up for defense team
 
       this.state.players.push({
         id: playerId,
@@ -107,11 +107,10 @@ export class GameEngine {
 
       // Give ball to center attacker if it's the first red team player
       if (team === 1 && this.state.players.filter(p => p.team === 1).length === 1) {
-        const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
         this.state.ball.position = {
-          x: Math.min(fieldRight - offset, x + offset),
-          y: Math.max(150 + offset, y - offset)
+          x: x,
+          y: y
         };
       }
     }
@@ -438,20 +437,21 @@ export class GameEngine {
       this.ctx.fillStyle = player.team === 1 ? 'red' : 'blue';
       this.ctx.fill();
 
+      // Black outline for selected player
       if (player.id === this.state.selectedPlayer) {
-        this.ctx.strokeStyle = 'yellow';
-        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 2;
         this.ctx.stroke();
       }
 
+      // Simple white outline for possession
       if (player.id === this.state.ball.possessionPlayerId) {
         this.ctx.strokeStyle = 'white';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 1;
         this.ctx.stroke();
       }
     });
 
-    // Draw ball
     this.drawBall();
   }
 
@@ -460,25 +460,21 @@ export class GameEngine {
     let ballX = this.state.ball.position.x;
     let ballY = this.state.ball.position.y;
 
+    // Center ball on possessing player
     if (possessingPlayer) {
-      const offset = 25;
-      ballX = possessingPlayer.position.x + offset;
-      ballY = possessingPlayer.position.y - offset;
+      ballX = possessingPlayer.position.x;
+      ballY = possessingPlayer.position.y;
     }
 
-    // Draw ball with black outline
+    // Draw ball
     this.ctx.beginPath();
     this.ctx.arc(ballX, ballY, this.BALL_RADIUS, 0, Math.PI * 2);
     this.ctx.fillStyle = 'yellow';
     this.ctx.fill();
-    this.ctx.strokeStyle = 'black';
-    this.ctx.lineWidth = 2;
-    this.ctx.stroke();
 
+    // Black outline when selected
     if (this.state.isBallSelected) {
-      this.ctx.beginPath();
-      this.ctx.arc(ballX, ballY, this.BALL_RADIUS + 2, 0, Math.PI * 2);
-      this.ctx.strokeStyle = 'white';
+      this.ctx.strokeStyle = 'black';
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
     }
@@ -495,18 +491,16 @@ export class GameEngine {
     const fieldTop = 50;
     const fieldBottom = this.canvas.height - 100;
 
-    // Get existing players for this team
     const teamPlayers = this.state.players.filter(p => p.team === team);
     const playerCount = teamPlayers.length;
 
     if (playerCount === 0) return;
 
-    // Remove existing players of the specified team
     this.state.players = this.state.players.filter(p => p.team !== team);
 
     // Position first 6 players on field in a line
-    const mainLineSpacing = fieldWidth / 7; // 7 segments for 6 players
-    const mainLineY = team === 1 ? fieldBottom - 100 : fieldTop + 100;
+    const mainLineSpacing = fieldWidth / 7;
+    const mainLineY = team === 1 ? fieldBottom - 150 : fieldTop + 150;
 
     const mainLineCount = Math.min(6, playerCount);
     for (let i = 0; i < mainLineCount; i++) {
@@ -519,29 +513,27 @@ export class GameEngine {
         position: { x, y: mainLineY }
       });
 
-      // Give ball to center player (3rd player) of attack team
       if (team === 1 && i === 2) {
         this.state.ball.possessionPlayerId = playerId;
-        const offset = 25;
         this.state.ball.position = {
-          x: Math.min(fieldRight - offset, x + offset),
-          y: Math.max(fieldTop + offset, mainLineY - offset)
+          x: x,
+          y: mainLineY
         };
       }
     }
 
-    // Position remaining players as substitutes in rows of 2
+    // Position remaining players as substitutes closer to sidelines
     if (playerCount > 6) {
       const remainingPlayers = playerCount - 6;
       const subsPerRow = 2;
       const rowCount = Math.ceil(remainingPlayers / subsPerRow);
-      // Position subs closer to touchlines (30 pixels from sideline)
-      const sidelineX = team === 1 ? fieldLeft - 30 : fieldRight + 30;
+      const sidelineOffset = 20; // Closer to sideline
+      const sidelineX = team === 1 ? fieldLeft - sidelineOffset : fieldRight + sidelineOffset;
 
       for (let i = 0; i < remainingPlayers; i++) {
         const row = Math.floor(i / subsPerRow);
         const col = i % subsPerRow;
-        const spacing = 40; // Space between substitute players
+        const spacing = 40;
 
         this.state.players.push({
           id: `team${team}-${i + 6}`,
