@@ -40,7 +40,7 @@ export class GameEngine {
   private lastFrameTime: number = 0;
   private readonly TOKEN_SPACING = 40;
   private readonly TOKEN_RADIUS = 15;
-  private readonly TOKENS_PER_ROW = 3;
+  private readonly TOKENS_PER_ROW = 5;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -70,15 +70,19 @@ export class GameEngine {
   public spawnTokens(team: 1 | 2, count: number) {
     if (count <= 0) return;
 
-    const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
     const fieldMiddle = this.canvas.height / 2;
     const startX = team === 1 ? 100 : this.canvas.width - 100;
+    const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
 
     for (let i = 0; i < count; i++) {
+      const totalPlayers = existingTeamPlayers + i;
+      const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
+      const col = totalPlayers % this.TOKENS_PER_ROW;
+
       const playerId = `team${team}-${this.state.players.length}`;
       const position = {
-        x: startX + (i * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
-        y: fieldMiddle
+        x: startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
+        y: fieldMiddle + (row * this.TOKEN_SPACING)
       };
 
       this.state.players.push({
