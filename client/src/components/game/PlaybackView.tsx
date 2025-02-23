@@ -13,6 +13,7 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -50,6 +51,13 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
     }
   };
 
+  const changeSpeed = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (engineRef.current) {
+      engineRef.current.setPlaybackSpeed(speed);
+    }
+  };
+
   return (
     <div className="relative flex flex-col gap-4">
       <div className="flex justify-between items-center mb-4">
@@ -69,25 +77,58 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
           className="w-full border border-border rounded-lg bg-black"
         />
 
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={resetPlayback}
-          >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={togglePlayback}
-          >
-            {isPlaying ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <PlayIcon className="h-4 w-4" />
-            )}
-          </Button>
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 items-center">
+          <div className="flex gap-2 bg-background/80 backdrop-blur-sm rounded-lg p-2">
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={resetPlayback}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={togglePlayback}
+            >
+              {isPlaying ? (
+                <Pause className="h-4 w-4" />
+              ) : (
+                <PlayIcon className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          <div className="flex gap-2 bg-background/80 backdrop-blur-sm rounded-lg p-2">
+            <Button
+              variant={playbackSpeed === 1 ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => changeSpeed(1)}
+            >
+              1x
+            </Button>
+            <Button
+              variant={playbackSpeed === 0.5 ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => changeSpeed(0.5)}
+            >
+              0.5x
+            </Button>
+            <Button
+              variant={playbackSpeed === 0.25 ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => changeSpeed(0.25)}
+            >
+              0.25x
+            </Button>
+            <Button
+              variant={playbackSpeed === 0.1 ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => changeSpeed(0.1)}
+            >
+              0.1x
+            </Button>
+          </div>
         </div>
       </div>
     </div>

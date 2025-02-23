@@ -36,6 +36,8 @@ export class GameEngine {
   private playbackInterval: number | null = null;
   private currentKeyFrameIndex: number = 0;
   private animationFrameId: number | null = null;
+  private playbackSpeed: number = 1;
+  private lastFrameTime: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -289,21 +291,33 @@ export class GameEngine {
     this.render();
   }
 
+  public setPlaybackSpeed(speed: number) {
+    this.playbackSpeed = speed;
+  }
+
   public startPlayback() {
     if (this.animationFrameId) return;
+    this.lastFrameTime = performance.now();
 
-    const animate = () => {
+    const animate = (currentTime: number) => {
       if (this.currentKeyFrameIndex < this.state.keyFrames.length) {
-        const frame = this.state.keyFrames[this.currentKeyFrameIndex];
-        Object.entries(frame.positions).forEach(([playerId, position]) => {
-          const player = this.state.players.find(p => p.id === playerId);
-          if (player) {
-            player.position = position;
-          }
-        });
-        this.state.ball = { ...frame.ball };
-        this.currentKeyFrameIndex++;
-        this.render();
+        const deltaTime = currentTime - this.lastFrameTime;
+
+        // Only update frame if enough time has passed based on playback speed
+        if (deltaTime >= (1000 / 60) / this.playbackSpeed) {
+          const frame = this.state.keyFrames[this.currentKeyFrameIndex];
+          Object.entries(frame.positions).forEach(([playerId, position]) => {
+            const player = this.state.players.find(p => p.id === playerId);
+            if (player) {
+              player.position = position;
+            }
+          });
+          this.state.ball = { ...frame.ball };
+          this.currentKeyFrameIndex++;
+          this.render();
+          this.lastFrameTime = currentTime;
+        }
+
         this.animationFrameId = requestAnimationFrame(animate);
       } else {
         this.animationFrameId = null;
