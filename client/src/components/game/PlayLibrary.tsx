@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { X, MoreVertical, FolderInput } from "lucide-react";
+import { X, MoreVertical, FolderInput, Download } from "lucide-react";
 import type { Play, Folder as FolderType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { GameEngine } from "@/lib/gameEngine";
 
 interface PlayLibraryProps {
   folderId: number;
@@ -41,6 +42,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
 
   const { toast } = useToast();
   const [playToDelete, setPlayToDelete] = useState<Play | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Delete play mutation
   const deletePlayMutation = useMutation({
@@ -98,6 +100,68 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
     movePlayMutation.mutate({ playId: play.id, newFolderId });
   };
 
+  const handleExportPlay = async (play: Play) => {
+    setIsExporting(true);
+    try {
+      // Create a temporary canvas for rendering
+      const canvas = document.createElement('canvas');
+      const aspectRatio = 4/3;
+      canvas.width = 1200;
+      canvas.height = canvas.width / aspectRatio;
+
+      // Initialize game engine with the temp canvas
+      const engine = new GameEngine(canvas);
+      engine.loadPlay(play);
+
+      // Create a MediaRecorder to record the canvas
+      const stream = canvas.captureStream(60); // 60fps
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9'
+      });
+
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => chunks.push(e.data);
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${play.name.replace(/\s+/g, '_')}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setIsExporting(false);
+        toast({
+          title: "Export complete",
+          description: "Your play animation has been downloaded.",
+        });
+      };
+
+      // Start recording
+      recorder.start();
+      engine.setPlaybackSpeed(1); // Normal speed for export
+      engine.startPlayback();
+
+      // Stop recording when playback ends
+      const checkPlayback = setInterval(() => {
+        if (!engine.isPlaybackActive()) {
+          clearInterval(checkPlayback);
+          recorder.stop();
+          stream.getTracks().forEach(track => track.stop());
+        }
+      }, 100);
+
+    } catch (error) {
+      console.error('Export error:', error);
+      setIsExporting(false);
+      toast({
+        title: "Export failed",
+        description: "Failed to export the play animation. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Filter plays for current folder
   const folderPlays = plays.filter(play => play.folderId === folderId);
   const currentFolder = folders?.find(f => f.id === folderId);
@@ -131,6 +195,13 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => handleExportPlay(play)}
+                    disabled={isExporting}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? "Exporting..." : "Download Video"}
+                  </DropdownMenuItem>
                   {folders?.filter(f => f.id !== folderId).map(folder => (
                     <DropdownMenuItem
                       key={folder.id}

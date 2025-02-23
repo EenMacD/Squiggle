@@ -628,4 +628,8 @@ export class GameEngine {
 
     this.render();
   }
+  // Add this method to the GameEngine class
+  public isPlaybackActive(): boolean {
+    return this.animationFrameId !== null && this.currentKeyFrameIndex < this.state.keyFrames.length;
+  }
 }
