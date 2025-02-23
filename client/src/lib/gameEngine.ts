@@ -469,8 +469,10 @@ export class GameEngine {
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.fillStyle = 'black';
-        const numberOffset = 20; // Consistent offset for both teams
-        const numberY = player.position.y + (player.team === 1 ? numberOffset : -numberOffset);
+        // Adjust offsets - red numbers just below circle, blue numbers closer to circle
+        const redOffset = this.TOKEN_RADIUS + 12; // Just below the circle
+        const blueOffset = -(this.TOKEN_RADIUS + 8); // Closer to the circle for blue team
+        const numberY = player.position.y + (player.team === 1 ? redOffset : blueOffset);
         this.ctx.fillText(player.number.toString(), player.position.x, numberY);
       }
     });
