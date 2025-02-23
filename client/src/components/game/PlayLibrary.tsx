@@ -195,133 +195,130 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-2 border-b border-border">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start"
-          onClick={() => setNewFolderDialog(true)}
-        >
-          <FolderPlus className="h-4 w-4 mr-2" />
-          New Folder
-        </Button>
+        <h2 className="font-semibold">Play List</h2>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="space-y-1 p-2">
-          {/* Folders */}
-          {folders.map((folder) => (
-            <div key={folder.id} className="space-y-1">
-              <div className="flex items-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={() => toggleFolder(folder.id)}
-                >
-                  {expandedFolders.has(folder.id) ? (
-                    <ChevronDown className="h-4 w-4 mr-2" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 mr-2" />
-                  )}
-                  <Folder className="h-4 w-4 mr-2" />
-                  {folder.name}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      className="text-destructive"
-                      onClick={() => setFolderToDelete(folder)}
-                    >
-                      Delete Folder
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* Plays in folder */}
-              {expandedFolders.has(folder.id) && (
-                <div className="ml-6 space-y-1">
-                  {plays
-                    .filter(play => play.folderId === folder.id)
-                    .map(play => (
-                      <div key={play.id} className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          className="flex-1 justify-start text-left h-8 px-2"
-                          onClick={() => onPlaySelect(play)}
+        <div className="space-y-4 p-2">
+          {/* Unorganized plays first */}
+          <div>
+            <h3 className="text-sm font-medium mb-2">Plays</h3>
+            <div className="space-y-1">
+              {unorganizedPlays.map(play => (
+                <div key={play.id} className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    className="flex-1 justify-start text-left h-8 px-2"
+                    onClick={() => onPlaySelect(play)}
+                  >
+                    {play.name}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {folders.length > 0 && folders.map(folder => (
+                        <DropdownMenuItem 
+                          key={folder.id}
+                          onClick={() => handleMovePlay(play, folder.id)}
                         >
-                          {play.name}
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleMovePlay(play, null)}>
-                              Remove from Folder
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => setPlayToDelete(play)}
-                            >
-                              Delete Play
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Unorganized plays */}
-          <div className="mt-4">
-            <div className="flex items-center mb-2">
-              <h3 className="text-sm font-medium">Unorganized Plays</h3>
-            </div>
-            {unorganizedPlays.map(play => (
-              <div key={play.id} className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  className="flex-1 justify-start text-left h-8 px-2"
-                  onClick={() => onPlaySelect(play)}
-                >
-                  {play.name}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {folders.map(folder => (
+                          <FolderInput className="h-4 w-4 mr-2" />
+                          Move to {folder.name}
+                        </DropdownMenuItem>
+                      ))}
                       <DropdownMenuItem 
-                        key={folder.id}
-                        onClick={() => handleMovePlay(play, folder.id)}
+                        className="text-destructive"
+                        onClick={() => setPlayToDelete(play)}
                       >
-                        <FolderInput className="h-4 w-4 mr-2" />
-                        Move to {folder.name}
+                        Delete Play
                       </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuItem 
-                      className="text-destructive"
-                      onClick={() => setPlayToDelete(play)}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Folders section */}
+          <div>
+            <h3 className="text-sm font-medium mb-2">Folders</h3>
+            <div className="space-y-1">
+              {folders.map((folder) => (
+                <div key={folder.id} className="space-y-1">
+                  <div className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={() => toggleFolder(folder.id)}
                     >
-                      Delete Play
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+                      {expandedFolders.has(folder.id) ? (
+                        <ChevronDown className="h-4 w-4 mr-2" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 mr-2" />
+                      )}
+                      <Folder className="h-4 w-4 mr-2" />
+                      {folder.name}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => setFolderToDelete(folder)}
+                        >
+                          Delete Folder
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Plays in folder */}
+                  {expandedFolders.has(folder.id) && (
+                    <div className="ml-6 space-y-1">
+                      {plays
+                        .filter(play => play.folderId === folder.id)
+                        .map(play => (
+                          <div key={play.id} className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              className="flex-1 justify-start text-left h-8 px-2"
+                              onClick={() => onPlaySelect(play)}
+                            >
+                              {play.name}
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleMovePlay(play, null)}>
+                                  Remove from Folder
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => setPlayToDelete(play)}
+                                >
+                                  Delete Play
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </ScrollArea>
