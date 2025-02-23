@@ -76,18 +76,34 @@ export class GameEngine {
 
     for (let i = 0; i < count; i++) {
       const totalPlayers = existingTeamPlayers + i;
-      const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
-      const col = totalPlayers % this.TOKENS_PER_ROW;
-
-      const x = startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1);
-      const y = startY - (row * this.TOKEN_SPACING);
-
       const playerId = `team${team}-${this.state.players.length}`;
+
+      let position: Position;
+      if (totalPlayers < 6) {
+        // First 6 players go in default bottom area
+        const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
+        const col = totalPlayers % this.TOKENS_PER_ROW;
+        position = {
+          x: startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
+          y: startY - (row * this.TOKEN_SPACING)
+        };
+      } else {
+        // Additional players go on sidelines
+        const sidelineStartY = 100; // Start below the top margin
+        const sidelineX = team === 1 ? 25 : this.canvas.width - 25; // Position on respective sideline
+        const sidelinePlayers = totalPlayers - 6; // Number of players on sideline
+        const sidelineRow = Math.floor(sidelinePlayers / 2); // Two players per row
+        const sidelineCol = sidelinePlayers % 2;
+        position = {
+          x: sidelineX + (sidelineCol * 30) * (team === 1 ? 1 : -1), // Offset by column
+          y: sidelineStartY + (sidelineRow * 40) // Move down by row
+        };
+      }
 
       this.state.players.push({
         id: playerId,
         team,
-        position: { x, y }
+        position
       });
 
       // If this is the first player added to the game, give them the ball
@@ -95,8 +111,8 @@ export class GameEngine {
         const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
         this.state.ball.position = {
-          x: x + offset,
-          y: y - offset
+          x: position.x + offset,
+          y: position.y - offset
         };
       }
     }
@@ -107,7 +123,7 @@ export class GameEngine {
   public startDragging(x: number, y: number) {
     // Check for default position button clicks
     const bottomY = this.canvas.height - 80; // Moved up above the bottom line
-    [1, 2].forEach(team => {
+    [1, 2].forEach((team: 1 | 2) => {
       const isTeam1 = team === 1;
       const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
       const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
@@ -382,19 +398,30 @@ export class GameEngine {
     this.ctx.fillStyle = '#000000';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Field lines
+    // Extended sidelines
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
+
+    // Main field rectangle
     this.ctx.strokeRect(50, 50, this.canvas.width - 100, this.canvas.height - 100);
 
+    // Extended sideline areas (10 units wider on each side)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
+    this.ctx.beginPath();
+    // Left extended area
+    this.ctx.strokeRect(15, 50, 25, this.canvas.height - 100);
+    // Right extended area
+    this.ctx.strokeRect(this.canvas.width - 40, 50, 25, this.canvas.height - 100);
+
     // Center line
+    this.ctx.strokeStyle = 'white';
     this.ctx.beginPath();
     this.ctx.moveTo(50, this.canvas.height / 2);
     this.ctx.lineTo(this.canvas.width - 50, this.canvas.height / 2);
     this.ctx.stroke();
 
     // Draw token spawners and default position buttons
-    [1, 2].forEach(team => {
+    [1, 2].forEach((team: 1 | 2) => {
       const isTeam1 = team === 1;
       const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
       const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
@@ -489,7 +516,7 @@ export class GameEngine {
     return this.state.isRecording;
   }
 
-  public setDefaultPositions(team: 1 | 2) {
+  private setDefaultPositions(team: 1 | 2) {
     // Field dimensions (accounting for margins)
     const fieldLeft = 50;
     const fieldRight = this.canvas.width - 50;
