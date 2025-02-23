@@ -79,11 +79,15 @@ export class GameEngine {
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldWidth = fieldRight - fieldLeft;
+    const fieldTop = 50;
+    const fieldBottom = this.canvas.height - 100;
+    const fieldHeight = fieldBottom - fieldTop;
+    const halfwayLine = fieldTop + fieldHeight / 2;
 
-    // Adjust spacing for more vertical space but tighter horizontal
-    const attackBaseY = this.canvas.height - 250; // More space from bottom
-    const defenseBaseY = 200; // More space from top
-    const spacing = 40; // Equal spacing for both directions initially
+    // Calculate base positions to be centered in respective halves
+    const attackBaseY = halfwayLine + (fieldHeight / 4); // Center in bottom half
+    const defenseBaseY = halfwayLine - (fieldHeight / 4); // Center in top half
+    const spacing = 40; // Base spacing value
 
     // Calculate rows and positions
     const playersPerRow = 5;
@@ -487,6 +491,8 @@ export class GameEngine {
     const fieldWidth = fieldRight - fieldLeft;
     const fieldTop = 50;
     const fieldBottom = this.canvas.height - 100;
+    const fieldHeight = fieldBottom - fieldTop;
+    const halfwayLine = fieldTop + fieldHeight / 2;
 
     const teamPlayers = this.state.players.filter(p => p.team === team);
     const playerCount = teamPlayers.length;
@@ -497,7 +503,10 @@ export class GameEngine {
 
     // Position first 6 players on field in a line
     const mainLineSpacing = fieldWidth / 7;
-    const mainLineY = team === 1 ? fieldBottom - 150 : fieldTop + 150;
+    // Calculate y-position to be centered in respective half
+    const mainLineY = team === 1
+      ? halfwayLine + (fieldHeight / 4)  // Center in bottom half
+      : halfwayLine - (fieldHeight / 4);  // Center in top half
 
     const mainLineCount = Math.min(6, playerCount);
     for (let i = 0; i < mainLineCount; i++) {
@@ -524,19 +533,26 @@ export class GameEngine {
       const remainingPlayers = playerCount - 6;
       const subsPerRow = 2;
       const rowCount = Math.ceil(remainingPlayers / subsPerRow);
-      const sidelineOffset = 20; // Closer to sideline
-      const sidelineX = team === 1 ? fieldLeft - sidelineOffset : fieldRight + sidelineOffset;
+      const sidelineOffset = 20; // Distance from sideline
+
+      // Position subs outside their respective sidelines
+      const sidelineX = team === 1
+        ? fieldLeft - sidelineOffset
+        : fieldRight + sidelineOffset;
 
       for (let i = 0; i < remainingPlayers; i++) {
         const row = Math.floor(i / subsPerRow);
         const col = i % subsPerRow;
         const spacing = 40;
 
+        // Both columns should be outside the sideline
+        const xOffset = col * spacing * (team === 1 ? -1 : 1); // Negative for team 1, positive for team 2
+
         this.state.players.push({
           id: `team${team}-${i + 6}`,
           team,
           position: {
-            x: sidelineX + (col * spacing) * (team === 1 ? 1 : -1),
+            x: sidelineX + xOffset,
             y: fieldTop + 150 + (row * spacing)
           }
         });
