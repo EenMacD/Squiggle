@@ -82,11 +82,23 @@ export class GameEngine {
       const x = startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1);
       const y = startY - (row * this.TOKEN_SPACING);
 
+      const playerId = `team${team}-${this.state.players.length}`;
+
       this.state.players.push({
-        id: `team${team}-${this.state.players.length}`,
+        id: playerId,
         team,
         position: { x, y }
       });
+
+      // If this is the first player added to the game, give them the ball
+      if (this.state.players.length === 1) {
+        const offset = 25;
+        this.state.ball.possessionPlayerId = playerId;
+        this.state.ball.position = {
+          x: x + offset,
+          y: y - offset
+        };
+      }
     }
 
     this.render();
