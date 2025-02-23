@@ -595,20 +595,47 @@ export class GameEngine {
   }
 
   // Add this method to the GameEngine class
+  public prepareStateForExport(keyframe: typeof this.state.keyFrames[0]) {
+    // Initialize players from keyframe
+    this.state.players = Object.entries(keyframe.positions).map(([id, position]) => {
+      const [teamStr, numStr] = id.split('-');
+      return {
+        id,
+        team: parseInt(teamStr.replace('team', '')) as 1 | 2,
+        position: { ...position },
+        number: parseInt(numStr)
+      };
+    });
+
+    // Set ball state
+    this.state.ball = { ...keyframe.ball };
+
+    // Reset selection states
+    this.state.selectedPlayer = null;
+    this.state.isDraggingBall = false;
+    this.state.isBallSelected = false;
+  }
+
+  // Update the renderFrame method to properly handle state
   public renderFrame(frameIndex: number) {
     if (frameIndex >= this.state.keyFrames.length) return;
 
     const frame = this.state.keyFrames[frameIndex];
 
-    // Update positions
+    // Ensure proper state initialization for first frame
+    if (frameIndex === 0) {
+      this.prepareStateForExport(frame);
+    }
+
+    // Update positions while maintaining player properties
     Object.entries(frame.positions).forEach(([playerId, position]) => {
       const player = this.state.players.find(p => p.id === playerId);
       if (player) {
-        player.position = position;
+        player.position = { ...position };
       }
     });
 
-    // Update ball
+    // Update ball state
     this.state.ball = { ...frame.ball };
 
     // Render the frame

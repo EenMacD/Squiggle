@@ -133,7 +133,7 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         const frameData = canvasRef.current.toDataURL('image/png');
         const base64Data = frameData.replace(/^data:image\/\w+;base64,/, '');
         const frameName = `frame${i.toString().padStart(4, '0')}.png`;
-        await ffmpeg.writeFile(frameName, await fetchFile(Buffer.from(base64Data, 'base64')));
+        await ffmpeg.writeFile(frameName, await fetchFile(new Uint8Array(Buffer.from(base64Data, 'base64'))));
         frames.push(frameName);
       }
 
