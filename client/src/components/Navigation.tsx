@@ -20,7 +20,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Folder as FolderType } from "@shared/schema";
 
 interface NavigationProps {
@@ -37,29 +37,33 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
     queryKey: ["/api/folders"],
   });
 
-  const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return;
-
-    try {
-      const response = await apiRequest("POST", "/api/folders", { name: newFolderName.trim() });
+  const createFolderMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("POST", "/api/folders", { name });
       if (!response.ok) throw new Error("Failed to create folder");
-
-      await queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
-
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
       toast({
         title: "Folder created",
         description: "New folder has been created successfully.",
       });
-
       setNewFolderDialog(false);
       setNewFolderName("");
-    } catch (error) {
+    },
+    onError: (error) => {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create folder",
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    createFolderMutation.mutate(newFolderName.trim());
   };
 
   return (
@@ -144,7 +148,12 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
             >
               Cancel
             </Button>
-            <Button onClick={handleCreateFolder}>Create</Button>
+            <Button 
+              onClick={handleCreateFolder}
+              disabled={createFolderMutation.isPending}
+            >
+              {createFolderMutation.isPending ? "Creating..." : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
