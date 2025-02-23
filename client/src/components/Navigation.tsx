@@ -1,4 +1,4 @@
-import { Menu, FolderPlus } from "lucide-react";
+import { Menu, FolderPlus, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -20,6 +20,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import type { Folder as FolderType } from "@shared/schema";
 
 interface NavigationProps {
   showPlayList: boolean;
@@ -30,6 +32,10 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
   const [newFolderDialog, setNewFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const { toast } = useToast();
+
+  const { data: folders } = useQuery<FolderType[]>({
+    queryKey: ["/api/folders"],
+  });
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -85,14 +91,27 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
                 </Button>
                 {/* Add Folder Option */}
                 {showPlayList && (
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start pl-8 text-sm"
-                    onClick={() => setNewFolderDialog(true)}
-                  >
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Add Folder
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start pl-8 text-sm"
+                      onClick={() => setNewFolderDialog(true)}
+                    >
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      Add Folder
+                    </Button>
+                    {/* Show folders */}
+                    {folders?.map((folder) => (
+                      <Button
+                        key={folder.id}
+                        variant="ghost"
+                        className="w-full justify-start pl-8 text-sm"
+                      >
+                        <Folder className="h-4 w-4 mr-2" />
+                        {folder.name}
+                      </Button>
+                    ))}
+                  </>
                 )}
               </div>
             </div>
