@@ -34,12 +34,12 @@ interface PlayLibraryProps {
 }
 
 export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProps) {
-  const { data: plays = [] } = useQuery<Play[]>({
-    queryKey: ["/api/plays"],
-  });
-
   const { data: folders } = useQuery<FolderType[]>({
     queryKey: ["/api/folders"],
+  });
+
+  const { data: plays = [] } = useQuery<Play[]>({
+    queryKey: ["/api/plays"],
   });
 
   const { toast } = useToast();
@@ -57,7 +57,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
       toast({
         title: "Play deleted",
-        description: "The play has been successfully deleted.",
+        description: "The play has been deleted successfully.",
       });
       setPlayToDelete(null);
     },
