@@ -49,7 +49,7 @@ export class GameEngine {
 
     const initialBallState: BallState = {
       position: {
-        x: 50 + this.SIDELINE_WIDTH, // Place ball on left sideline
+        x: canvas.width / 2, // Place ball in center of halfway line
         y: canvas.height / 2
       },
       possessionPlayerId: null
