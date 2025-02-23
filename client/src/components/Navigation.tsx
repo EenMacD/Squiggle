@@ -40,21 +40,27 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
   const createFolderMutation = useMutation({
     mutationFn: async (name: string) => {
       const response = await apiRequest("POST", "/api/folders", { name });
-      if (!response.ok) throw new Error("Failed to create folder");
-      return response.json();
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || "Failed to create folder");
+      }
+
+      const data = await response.json();
+      return data as FolderType;
     },
-    onSuccess: () => {
+    onSuccess: (newFolder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
       toast({
         title: "Folder created",
-        description: "New folder has been created successfully.",
+        description: `Folder "${newFolder.name}" has been created successfully.`,
       });
       setNewFolderDialog(false);
       setNewFolderName("");
     },
     onError: (error) => {
       toast({
-        title: "Error",
+        title: "Error creating folder",
         description: error instanceof Error ? error.message : "Failed to create folder",
         variant: "destructive",
       });
@@ -62,7 +68,14 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
   });
 
   const handleCreateFolder = () => {
-    if (!newFolderName.trim()) return;
+    if (!newFolderName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a folder name",
+        variant: "destructive",
+      });
+      return;
+    }
     createFolderMutation.mutate(newFolderName.trim());
   };
 
@@ -136,6 +149,11 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Folder name"
               autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreateFolder();
+                }
+              }}
             />
           </div>
           <DialogFooter>
