@@ -408,12 +408,12 @@ export class GameEngine {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw field
-    this.ctx.fillStyle = '#000000';
+    // Draw field background in white
+    this.ctx.fillStyle = '#FFFFFF';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Sidelines
-    this.ctx.strokeStyle = 'white';
+    // Sidelines in black
+    this.ctx.strokeStyle = 'black';
     this.ctx.lineWidth = 2;
 
     // Main field rectangle
