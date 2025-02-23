@@ -7,6 +7,7 @@ export interface IStorage {
   getFolders(): Promise<Folder[]>;
   createFolder(folder: InsertFolder): Promise<Folder>;
   deleteFolder(id: number): Promise<void>;
+  renameFolder(id: number, name: string): Promise<Folder>;
 
   // Play operations
   getPlays(): Promise<Play[]>;
@@ -34,6 +35,18 @@ export class DatabaseStorage implements IStorage {
         createdAt: now,
         updatedAt: now
       })
+      .returning();
+    return folder;
+  }
+
+  async renameFolder(id: number, name: string): Promise<Folder> {
+    const [folder] = await db
+      .update(folders)
+      .set({ 
+        name,
+        updatedAt: new Date()
+      })
+      .where(eq(folders.id, id))
       .returning();
     return folder;
   }

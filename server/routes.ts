@@ -100,6 +100,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/folders/:id", async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name?.trim()) {
+        return res.status(400).json({ error: "Folder name is required" });
+      }
+      const folder = await storage.renameFolder(Number(req.params.id), name.trim());
+      res.json(folder);
+    } catch (error) {
+      log(`Error renaming folder: ${error}`);
+      res.status(500).json({ error: "Failed to rename folder" });
+    }
+  });
+
   // Play Routes
   app.get("/api/plays", async (_req, res) => {
     try {

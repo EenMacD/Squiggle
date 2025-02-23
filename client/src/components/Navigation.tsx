@@ -1,4 +1,4 @@
-import { Menu, FolderPlus, Folder } from "lucide-react";
+import { Menu, FolderPlus, Folder, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -14,6 +14,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -31,6 +47,9 @@ interface NavigationProps {
 export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps) {
   const [newFolderDialog, setNewFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [folderToRename, setFolderToRename] = useState<FolderType | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null);
+  const [renameFolderName, setRenameFolderName] = useState("");
   const { toast } = useToast();
 
   const { data: folders } = useQuery<FolderType[]>({
@@ -67,6 +86,58 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
     },
   });
 
+  // Delete folder mutation
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (folderId: number) => {
+      const response = await apiRequest("DELETE", `/api/folders/${folderId}`);
+      if (!response.ok) throw new Error("Failed to delete folder");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      toast({
+        title: "Folder deleted",
+        description: "The folder has been deleted successfully.",
+      });
+      setFolderToDelete(null);
+      if (selectedFolderId === folderToDelete?.id) {
+        onFolderSelect(null);
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete folder",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Rename folder mutation
+  const renameFolderMutation = useMutation({
+    mutationFn: async ({ folderId, name }: { folderId: number; name: string }) => {
+      const response = await apiRequest("PATCH", `/api/folders/${folderId}`, { name });
+      if (!response.ok) throw new Error("Failed to rename folder");
+      return response.json();
+    },
+    onSuccess: (updatedFolder) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      toast({
+        title: "Folder renamed",
+        description: `Folder has been renamed to "${updatedFolder.name}".`,
+      });
+      setFolderToRename(null);
+      setRenameFolderName("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to rename folder",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) {
       toast({
@@ -77,6 +148,27 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
       return;
     }
     createFolderMutation.mutate(newFolderName.trim());
+  };
+
+  const handleDeleteFolder = () => {
+    if (folderToDelete) {
+      deleteFolderMutation.mutate(folderToDelete.id);
+    }
+  };
+
+  const handleRenameFolder = () => {
+    if (!folderToRename || !renameFolderName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a folder name",
+        variant: "destructive",
+      });
+      return;
+    }
+    renameFolderMutation.mutate({
+      folderId: folderToRename.id,
+      name: renameFolderName.trim(),
+    });
   };
 
   return (
@@ -105,20 +197,46 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
 
               <div className="space-y-1">
                 {folders?.map((folder) => (
-                  <Button
-                    key={folder.id}
-                    variant="ghost"
-                    className={cn(
-                      "w-full justify-start",
-                      selectedFolderId === folder.id && "bg-accent"
-                    )}
-                    onClick={() => onFolderSelect(
-                      selectedFolderId === folder.id ? null : folder.id
-                    )}
-                  >
-                    <Folder className="h-4 w-4 mr-2" />
-                    {folder.name}
-                  </Button>
+                  <div key={folder.id} className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "flex-1 justify-start",
+                        selectedFolderId === folder.id && "bg-accent"
+                      )}
+                      onClick={() => onFolderSelect(
+                        selectedFolderId === folder.id ? null : folder.id
+                      )}
+                    >
+                      <Folder className="h-4 w-4 mr-2" />
+                      {folder.name}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setFolderToRename(folder);
+                            setRenameFolderName(folder.name);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Rename Folder
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => setFolderToDelete(folder)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Folder
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 ))}
               </div>
             </div>
@@ -165,6 +283,70 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rename Folder Dialog */}
+      <Dialog open={!!folderToRename} onOpenChange={() => setFolderToRename(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Folder</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={renameFolderName}
+              onChange={(e) => setRenameFolderName(e.target.value)}
+              placeholder="New folder name"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleRenameFolder();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFolderToRename(null);
+                setRenameFolderName("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRenameFolder}
+              disabled={renameFolderMutation.isPending}
+            >
+              {renameFolderMutation.isPending ? "Renaming..." : "Rename"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Folder Confirmation */}
+      <AlertDialog 
+        open={!!folderToDelete} 
+        onOpenChange={() => setFolderToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{folderToDelete?.name}"? 
+              Plays inside this folder will be moved to unorganized plays.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteFolder}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </nav>
   );
 }
