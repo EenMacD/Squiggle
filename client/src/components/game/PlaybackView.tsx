@@ -11,16 +11,27 @@ interface PlaybackViewProps {
 
 export function PlaybackView({ play, onClose }: PlaybackViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   useEffect(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && containerRef.current) {
+      const container = containerRef.current;
       const canvas = canvasRef.current;
       const aspectRatio = 4/3;
-      canvas.width = 1200; // Match main field size
-      canvas.height = canvas.width / aspectRatio;
+
+      // Match the main canvas responsive sizing logic
+      const maxWidth = container.clientWidth - 32;
+      const maxHeight = (container.clientHeight - 140) * 0.9;
+      const widthFromHeight = maxHeight * aspectRatio;
+
+      const width = Math.min(maxWidth, widthFromHeight);
+      const height = width / aspectRatio;
+
+      canvas.width = width;
+      canvas.height = height;
 
       engineRef.current = new GameEngine(canvas);
       engineRef.current.loadPlay(play);
@@ -59,7 +70,7 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
   };
 
   return (
-    <div className="relative flex flex-col gap-4">
+    <div className="relative flex flex-col gap-4" ref={containerRef}>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">{play.name}</h2>
         <Button 
@@ -71,10 +82,10 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         </Button>
       </div>
 
-      <div className="relative">
+      <div className="relative flex-1">
         <canvas
           ref={canvasRef}
-          className="w-full border border-border rounded-lg bg-black"
+          className="w-full border border-border rounded-lg"
         />
 
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col gap-2 items-center">
