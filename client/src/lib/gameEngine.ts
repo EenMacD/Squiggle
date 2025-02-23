@@ -170,21 +170,21 @@ export class GameEngine {
   private checkBallClick(x: number, y: number): boolean {
     const ballRadius = this.BALL_RADIUS;
     const possessingPlayer = this.state.players.find(p => p.id === this.state.ball.possessionPlayerId);
-    if (possessingPlayer) {
-      const offset = 25;
-      const ballX = possessingPlayer.position.x + offset;
-      const ballY = possessingPlayer.position.y - offset;
-      const dx = ballX - x;
-      const dy = ballY - y;
-      const distanceToBall = Math.sqrt(dx * dx + dy * dy);
 
-      if (distanceToBall < ballRadius) {
-        this.state.isBallSelected = true;
-        this.state.isDraggingBall = true;
-        this.state.selectedPlayer = null;
-        this.render();
-        return true;
-      }
+    // Get ball position (either centered on player or at its current position)
+    const ballX = possessingPlayer ? possessingPlayer.position.x : this.state.ball.position.x;
+    const ballY = possessingPlayer ? possessingPlayer.position.y : this.state.ball.position.y;
+
+    const dx = ballX - x;
+    const dy = ballY - y;
+    const distanceToBall = Math.sqrt(dx * dx + dy * dy);
+
+    if (distanceToBall < ballRadius) {
+      this.state.isBallSelected = true;
+      this.state.isDraggingBall = true;
+      this.state.selectedPlayer = null;
+      this.render();
+      return true;
     }
     return false;
   }
@@ -201,7 +201,10 @@ export class GameEngine {
     const constrainedY = Math.max(fieldTop + this.TOKEN_RADIUS, Math.min(fieldBottom - this.TOKEN_RADIUS, y));
 
     if (this.state.isDraggingBall) {
+      // Allow ball to be dragged freely
       this.state.ball.position = { x: constrainedX, y: constrainedY };
+      // Release ball from player possession while dragging
+      this.state.ball.possessionPlayerId = null;
       this.render();
       return;
     }
@@ -211,11 +214,11 @@ export class GameEngine {
       if (player) {
         player.position = { x: constrainedX, y: constrainedY };
 
+        // If player has ball possession, move ball with player
         if (this.state.ball.possessionPlayerId === player.id) {
-          const offset = 25;
           this.state.ball.position = {
-            x: Math.min(fieldRight - offset, player.position.x + offset),
-            y: Math.max(fieldTop + offset, player.position.y - offset)
+            x: player.position.x,
+            y: player.position.y
           };
         }
 
@@ -234,10 +237,9 @@ export class GameEngine {
       if (receivingPlayer && receivingPlayer.team === 1) {
         // Only allow red team to receive the ball
         this.state.ball.possessionPlayerId = receivingPlayer.id;
-        const offset = 25;
         this.state.ball.position = {
-          x: receivingPlayer.position.x + offset,
-          y: receivingPlayer.position.y - offset
+          x: receivingPlayer.position.x,
+          y: receivingPlayer.position.y
         };
 
         if (this.state.isRecording) {
@@ -248,10 +250,9 @@ export class GameEngine {
         const redPlayer = this.state.players.find(p => p.team === 1);
         if (redPlayer) {
           this.state.ball.possessionPlayerId = redPlayer.id;
-          const offset = 25;
           this.state.ball.position = {
-            x: redPlayer.position.x + offset,
-            y: redPlayer.position.y - offset
+            x: redPlayer.position.x,
+            y: redPlayer.position.y
           };
         }
       }
@@ -461,23 +462,19 @@ export class GameEngine {
     let ballY = this.state.ball.position.y;
 
     // Center ball on possessing player
-    if (possessingPlayer) {
+    if (possessingPlayer && !this.state.isDraggingBall) {
       ballX = possessingPlayer.position.x;
       ballY = possessingPlayer.position.y;
     }
 
-    // Draw ball
+    // Draw ball with default black outline
     this.ctx.beginPath();
     this.ctx.arc(ballX, ballY, this.BALL_RADIUS, 0, Math.PI * 2);
     this.ctx.fillStyle = 'yellow';
     this.ctx.fill();
-
-    // Black outline when selected
-    if (this.state.isBallSelected) {
-      this.ctx.strokeStyle = 'black';
-      this.ctx.lineWidth = 2;
-      this.ctx.stroke();
-    }
+    this.ctx.strokeStyle = 'black';
+    this.ctx.lineWidth = this.state.isBallSelected ? 2 : 1;
+    this.ctx.stroke();
   }
 
   public isRecording(): boolean {
