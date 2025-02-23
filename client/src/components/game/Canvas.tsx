@@ -12,7 +12,8 @@ export function Canvas() {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
       const aspectRatio = 4/3;
-      canvas.width = 800;
+      // Increase canvas size by 50% to zoom out
+      canvas.width = 1200; // Previous was 800
       canvas.height = canvas.width / aspectRatio;
 
       const engine = new GameEngine(canvas);
@@ -75,16 +76,18 @@ export function Canvas() {
   };
 
   return (
-    <div className="flex flex-col gap-4 relative">
-      <canvas
-        ref={canvasRef}
-        className="w-full border border-border rounded-lg bg-black"
-        onMouseDown={handleCanvasMouseDown}
-        onMouseMove={handleCanvasMouseMove}
-        onMouseUp={handleCanvasMouseUp}
-        onMouseLeave={handleMouseLeave}
-      />
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+    <div className="flex flex-col gap-4">
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          className="w-full border border-border rounded-lg bg-black"
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleMouseLeave}
+        />
+      </div>
+      <div className="flex justify-center mt-4">
         {gameEngine && <Controls gameEngine={gameEngine} />}
       </div>
     </div>
