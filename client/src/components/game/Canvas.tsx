@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Plus, Minus, Trash2 } from "lucide-react";
 
+const TOKEN_RADIUS = 15; // Define constant here
+
 interface TokenDialogState {
   isOpen: boolean;
   team: 1 | 2;
@@ -99,10 +101,9 @@ export function Canvas() {
     const y = (e.clientY - rect.top) * scaleY;
 
     // Check for player number click
+    const numberOffset = 20; // Consistent with gameEngine
     const clickedPlayer = gameEngine.state.players.find(player => {
-      const numberY = player.team === 1 
-        ? player.position.y + this.TOKEN_RADIUS + 15  // Further below red players
-        : player.position.y - this.TOKEN_RADIUS - 15;  // Further above blue players
+      const numberY = player.position.y + (player.team === 1 ? numberOffset : -numberOffset);
       const dx = x - player.position.x;
       const dy = y - numberY;
       return Math.sqrt(dx * dx + dy * dy) < 10;  // Small click area for numbers

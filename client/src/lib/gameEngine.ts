@@ -239,7 +239,7 @@ export class GameEngine {
     }
   }
 
-  private stopDragging() {
+  public stopDragging() {
     if (this.state.isDraggingBall) {
       const receivingPlayer = this.findNearestPlayer(
         this.state.ball.position.x,
@@ -417,7 +417,7 @@ export class GameEngine {
     }
   }
 
-  private render() {
+  public render() {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -469,9 +469,8 @@ export class GameEngine {
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.fillStyle = 'black';
-        const numberY = player.team === 1
-          ? player.position.y + this.TOKEN_RADIUS + 15  // Further below red players
-          : player.position.y - this.TOKEN_RADIUS - 15;  // Further above blue players
+        const numberOffset = 20; // Consistent offset for both teams
+        const numberY = player.position.y + (player.team === 1 ? numberOffset : -numberOffset);
         this.ctx.fillText(player.number.toString(), player.position.x, numberY);
       }
     });
@@ -513,7 +512,7 @@ export class GameEngine {
     }
   }
 
-  private setDefaultPositions(team: 1 | 2) {
+  public setDefaultPositions(team: 1 | 2) {
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldWidth = fieldRight - fieldLeft;
@@ -531,10 +530,11 @@ export class GameEngine {
 
     // Position first 6 players on field in a line
     const mainLineSpacing = fieldWidth / 7;
-    // Calculate y-position: just below halfway for red team, middle of top half for blue team
+    // Calculate y-position: further apart based on team and number height
+    const numberOffset = 30; // Space for numbers
     const mainLineY = team === 1
-      ? halfwayLine + 50  // Red team 50px below halfway line (increased from 30)
-      : halfwayLine - (fieldHeight / 4);  // Blue team in middle of their half
+      ? halfwayLine + 100  // Red team 100px below halfway line (increased spacing)
+      : halfwayLine - 100;  // Blue team 100px above halfway line (increased spacing)
 
     const mainLineCount = Math.min(6, playerCount);
     for (let i = 0; i < mainLineCount; i++) {
@@ -572,7 +572,7 @@ export class GameEngine {
       for (let i = 0; i < remainingPlayers; i++) {
         const row = Math.floor(i / subsPerRow);
         const col = i % subsPerRow;
-        const spacing = 40;
+        const spacing = 60; // Increased vertical spacing
 
         // Both columns should be outside the sideline
         const xOffset = col * spacing * (team === 1 ? -1 : 1); // Negative for team 1, positive for team 2
@@ -582,7 +582,7 @@ export class GameEngine {
           team,
           position: {
             x: sidelineX + xOffset,
-            y: fieldTop + 150 + (row * spacing)
+            y: fieldTop + 150 + (row * spacing) // Increased vertical spacing
           },
           number: i + 7
         });
