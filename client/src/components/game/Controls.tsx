@@ -113,6 +113,8 @@ export function Controls({ gameEngine }: ControlsProps) {
     }
   };
 
+  const hasFolders = folders && folders.length > 0;
+
   return (
     <>
       <div className="flex gap-4 items-center bg-background rounded-lg p-2 shadow-lg">
@@ -148,24 +150,27 @@ export function Controls({ gameEngine }: ControlsProps) {
                 value={playName}
                 onChange={(e) => setPlayName(e.target.value)}
                 placeholder="Enter a name for this play"
+                autoFocus
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="folder">Folder (Optional)</Label>
-              <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a folder" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No folder</SelectItem>
-                  {folders?.map(folder => (
-                    <SelectItem key={folder.id} value={folder.id.toString()}>
-                      {folder.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {hasFolders && (
+              <div className="space-y-2">
+                <Label htmlFor="folder">Save to Folder (Optional)</Label>
+                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Play List</SelectItem>
+                    {folders.map(folder => (
+                      <SelectItem key={folder.id} value={folder.id.toString()}>
+                        {folder.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
