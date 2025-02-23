@@ -71,34 +71,15 @@ export class GameEngine {
     if (count <= 0) return;
 
     const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
+    const fieldMiddle = this.canvas.height / 2;
     const startX = team === 1 ? 100 : this.canvas.width - 100;
-    const startY = this.canvas.height - 100;
 
     for (let i = 0; i < count; i++) {
-      const totalPlayers = existingTeamPlayers + i;
       const playerId = `team${team}-${this.state.players.length}`;
-
-      let position: Position;
-      if (totalPlayers < 6) {
-        // First 6 players go in default bottom area
-        const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
-        const col = totalPlayers % this.TOKENS_PER_ROW;
-        position = {
-          x: startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
-          y: startY - (row * this.TOKEN_SPACING)
-        };
-      } else {
-        // Additional players go on sidelines
-        const sidelineStartY = 100; // Start below the top margin
-        const sidelineX = team === 1 ? 25 : this.canvas.width - 25; // Position on respective sideline
-        const sidelinePlayers = totalPlayers - 6; // Number of players on sideline
-        const sidelineRow = Math.floor(sidelinePlayers / 2); // Two players per row
-        const sidelineCol = sidelinePlayers % 2;
-        position = {
-          x: sidelineX + (sidelineCol * 30) * (team === 1 ? 1 : -1), // Offset by column
-          y: sidelineStartY + (sidelineRow * 40) // Move down by row
-        };
-      }
+      const position = {
+        x: startX + (i * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
+        y: fieldMiddle
+      };
 
       this.state.players.push({
         id: playerId,
@@ -120,6 +101,35 @@ export class GameEngine {
     this.render();
   }
 
+  public removePlayersFromTeam(team: 1 | 2, targetCount: number) {
+    const teamPlayers = this.state.players.filter(p => p.team === team);
+    if (teamPlayers.length <= targetCount) return;
+
+    // Remove players from the end of the array
+    const playersToRemove = teamPlayers.slice(targetCount);
+    this.state.players = this.state.players.filter(p => !playersToRemove.includes(p));
+
+    // If a removed player had the ball, give it to the first remaining player
+    if (playersToRemove.some(p => p.id === this.state.ball.possessionPlayerId)) {
+      const remainingPlayer = this.state.players[0];
+      if (remainingPlayer) {
+        this.state.ball.possessionPlayerId = remainingPlayer.id;
+        this.state.ball.position = {
+          x: remainingPlayer.position.x + 25,
+          y: remainingPlayer.position.y - 25
+        };
+      } else {
+        this.state.ball.possessionPlayerId = null;
+        this.state.ball.position = {
+          x: this.canvas.width / 2,
+          y: this.canvas.height / 2
+        };
+      }
+    }
+
+    this.render();
+  }
+
   public startDragging(x: number, y: number) {
     // Check for default position button clicks
     const bottomY = this.canvas.height - 80; // Moved up above the bottom line
@@ -127,14 +137,21 @@ export class GameEngine {
       const isTeam1 = team === 1;
       const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
       const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
+      const binBtnX = isTeam1 ? defaultBtnX + 90 : defaultBtnX - 90;
+      const buttonY = this.canvas.height - 30; // Default button positioned above the line
 
       // Only check for button click if there are players for this team
       if (this.state.players.filter(p => p.team === team).length > 0) {
-        if (x >= defaultBtnX - 40 && x <= defaultBtnX + 40 &&
-            y >= bottomY - 15 && y <= bottomY + 15) {
-          this.setDefaultPositions(team);
-          return;
-        }
+          // Default positions button click
+          if (x >= defaultBtnX - 60 && x <= defaultBtnX + 60 && y >= buttonY - 15 && y <= buttonY + 15) {
+            this.setDefaultPositions(team);
+            return;
+          }
+          // Bin button click
+          if (x >= binBtnX - 15 && x <= binBtnX + 15 && y >= buttonY - 15 && y <= buttonY + 15) {
+            this.removePlayersFromTeam(team, 0);
+            return;
+          }
       }
     });
 
@@ -398,20 +415,12 @@ export class GameEngine {
     this.ctx.fillStyle = '#000000';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Extended sidelines
+    // Sidelines
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
 
     // Main field rectangle
     this.ctx.strokeRect(50, 50, this.canvas.width - 100, this.canvas.height - 100);
-
-    // Extended sideline areas (10 units wider on each side)
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
-    this.ctx.beginPath();
-    // Left extended area
-    this.ctx.strokeRect(15, 50, 25, this.canvas.height - 100);
-    // Right extended area
-    this.ctx.strokeRect(this.canvas.width - 40, 50, 25, this.canvas.height - 100);
 
     // Center line
     this.ctx.strokeStyle = 'white';
@@ -420,13 +429,14 @@ export class GameEngine {
     this.ctx.lineTo(this.canvas.width - 50, this.canvas.height / 2);
     this.ctx.stroke();
 
-    // Draw token spawners and default position buttons
+    // Draw token spawners and control buttons
     [1, 2].forEach((team: 1 | 2) => {
       const isTeam1 = team === 1;
       const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
       const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
+      const binBtnX = isTeam1 ? defaultBtnX + 90 : defaultBtnX - 90;
       const spawnerY = this.canvas.height - 50;
-      const buttonY = this.canvas.height - 80; // Default button positioned above the line
+      const buttonY = this.canvas.height - 30; // Moved below the bottom line
 
       // Draw token spawner
       this.ctx.beginPath();
@@ -444,20 +454,42 @@ export class GameEngine {
       this.ctx.lineTo(spawnerX, spawnerY + 5);
       this.ctx.stroke();
 
-      // Draw default position button if there are players
+      // Draw default position button and bin button if there are players
       if (this.state.players.filter(p => p.team === team).length > 0) {
+        // Default positions button
         this.ctx.fillStyle = isTeam1 ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
         this.ctx.beginPath();
-        this.ctx.roundRect(defaultBtnX - 40, buttonY - 15, 80, 30, 5);
+        this.ctx.roundRect(defaultBtnX - 60, buttonY - 15, 120, 30, 5);
         this.ctx.fill();
         this.ctx.strokeStyle = 'white';
-        this.ctx.strokeRect(defaultBtnX - 40, buttonY - 15, 80, 30);
+        this.ctx.strokeRect(defaultBtnX - 60, buttonY - 15, 120, 30);
 
         this.ctx.fillStyle = 'white';
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
-        this.ctx.fillText('Default', defaultBtnX, buttonY);
+        this.ctx.fillText('Default positions', defaultBtnX, buttonY);
+
+        // Bin button
+        this.ctx.fillStyle = isTeam1 ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
+        this.ctx.beginPath();
+        this.ctx.roundRect(binBtnX - 15, buttonY - 15, 30, 30, 5);
+        this.ctx.fill();
+        this.ctx.strokeStyle = 'white';
+        this.ctx.strokeRect(binBtnX - 15, buttonY - 15, 30, 30);
+
+        // Draw bin icon
+        this.ctx.strokeStyle = 'white';
+        this.ctx.beginPath();
+        // Top of bin
+        this.ctx.moveTo(binBtnX - 8, buttonY - 8);
+        this.ctx.lineTo(binBtnX + 8, buttonY - 8);
+        // Sides of bin
+        this.ctx.moveTo(binBtnX - 6, buttonY - 8);
+        this.ctx.lineTo(binBtnX - 6, buttonY + 8);
+        this.ctx.moveTo(binBtnX + 6, buttonY - 8);
+        this.ctx.lineTo(binBtnX + 6, buttonY + 8);
+        this.ctx.stroke();
       }
     });
 

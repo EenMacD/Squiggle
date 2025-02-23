@@ -12,12 +12,24 @@ interface TokenDialogState {
   count: number;
 }
 
+// Add new interface for remove players dialog
+interface RemovePlayersDialogState {
+  isOpen: boolean;
+  team: 1 | 2;
+  count: number;
+}
+
 export function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [gameEngine, setGameEngine] = useState<GameEngine | null>(null);
   const { toast } = useToast();
   const [tokenDialog, setTokenDialog] = useState<TokenDialogState>({
+    isOpen: false,
+    team: 1,
+    count: 0
+  });
+  const [removePlayersDialog, setRemovePlayersDialog] = useState<RemovePlayersDialogState>({
     isOpen: false,
     team: 1,
     count: 0
@@ -79,12 +91,37 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Check if clicking on a token counter
-    const counterY = canvasRef.current.height - 50;
-    [1, 2].forEach(team => {
-      const counterX = team === 1 ? 50 : canvasRef.current!.width - 50;
-      const dx = x - counterX;
-      const dy = y - counterY;
+    // Check for button clicks at the bottom
+    const buttonY = canvasRef.current.height - 30;
+    [1, 2].forEach((team: 1 | 2) => {
+      const isTeam1 = team === 1;
+      const spawnerX = isTeam1 ? 50 : canvasRef.current!.width - 50;
+      const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
+      const binBtnX = isTeam1 ? defaultBtnX + 90 : defaultBtnX - 90;
+
+      // Check for default positions button
+      if (x >= defaultBtnX - 60 && x <= defaultBtnX + 60 &&
+          y >= buttonY - 15 && y <= buttonY + 15) {
+        gameEngine.setDefaultPositions(team as 1 | 2);
+        return;
+      }
+
+      // Check for bin button
+      if (x >= binBtnX - 15 && x <= binBtnX + 15 &&
+          y >= buttonY - 15 && y <= buttonY + 15) {
+        const teamPlayers = gameEngine.state.players.filter(p => p.team === team).length;
+        setRemovePlayersDialog({
+          isOpen: true,
+          team: team as 1 | 2,
+          count: teamPlayers
+        });
+        return;
+      }
+
+      // Check for token spawner
+      const spawnerY = canvasRef.current!.height - 50;
+      const dx = x - spawnerX;
+      const dy = y - spawnerY;
       if (Math.sqrt(dx * dx + dy * dy) < 15) {
         setTokenDialog({
           isOpen: true,
@@ -125,6 +162,16 @@ export function Canvas() {
     if (!gameEngine || tokenDialog.count === 0) return;
     gameEngine.spawnTokens(tokenDialog.team, tokenDialog.count);
     setTokenDialog(prev => ({ ...prev, isOpen: false, count: 0 }));
+  };
+
+  const handleRemovePlayers = () => {
+    if (!gameEngine || removePlayersDialog.count === gameEngine.state.players.filter(p => p.team === removePlayersDialog.team).length) {
+      setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
+      return;
+    }
+
+    gameEngine.removePlayersFromTeam(removePlayersDialog.team, removePlayersDialog.count);
+    setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
   };
 
   return (
@@ -191,6 +238,62 @@ export function Canvas() {
             </Button>
             <Button onClick={handleSpawnTokens}>
               Add Players
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Remove Players Dialog */}
+      <Dialog 
+        open={removePlayersDialog.isOpen} 
+        onOpenChange={(open) => setRemovePlayersDialog(prev => ({ ...prev, isOpen: open }))}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Reduce {removePlayersDialog.team === 1 ? "Red" : "Blue"} Players
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center gap-4 py-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setRemovePlayersDialog(prev => ({
+                ...prev,
+                count: Math.max(0, prev.count - 1)
+              }))}
+              disabled={removePlayersDialog.count === 0}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <span className="text-2xl font-bold w-12 text-center">
+              {removePlayersDialog.count}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (!gameEngine) return;
+                const maxPlayers = gameEngine.state.players.filter(p => p.team === removePlayersDialog.team).length;
+                setRemovePlayersDialog(prev => ({
+                  ...prev,
+                  count: Math.min(maxPlayers, prev.count + 1)
+                }));
+              }}
+              disabled={!gameEngine || removePlayersDialog.count === gameEngine.state.players.filter(p => p.team === removePlayersDialog.team).length}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }))}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRemovePlayers}>
+              Remove Players
             </Button>
           </DialogFooter>
         </DialogContent>
