@@ -62,7 +62,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
 
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(error || "Failed to create playlist");
+        throw new Error(error || "Failed to create folder");
       }
 
       const data = await response.json();
@@ -71,16 +71,16 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
     onSuccess: (newFolder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
       toast({
-        title: "Playlist created",
-        description: `Playlist "${newFolder.name}" has been created successfully.`,
+        title: "Folder created",
+        description: `Folder "${newFolder.name}" has been created successfully.`,
       });
       setNewFolderDialog(false);
       setNewFolderName("");
     },
     onError: (error) => {
       toast({
-        title: "Error creating playlist",
-        description: error instanceof Error ? error.message : "Failed to create playlist",
+        title: "Error creating folder",
+        description: error instanceof Error ? error.message : "Failed to create folder",
         variant: "destructive",
       });
     },
@@ -90,14 +90,14 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderId: number) => {
       const response = await apiRequest("DELETE", `/api/folders/${folderId}`);
-      if (!response.ok) throw new Error("Failed to delete playlist");
+      if (!response.ok) throw new Error("Failed to delete folder");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
       toast({
-        title: "Playlist deleted",
-        description: "The playlist has been deleted successfully.",
+        title: "Folder deleted",
+        description: "The folder has been deleted successfully.",
       });
       setFolderToDelete(null);
       if (selectedFolderId === folderToDelete?.id) {
@@ -107,7 +107,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
     onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete playlist",
+        description: error instanceof Error ? error.message : "Failed to delete folder",
         variant: "destructive",
       });
     },
@@ -117,14 +117,14 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
   const renameFolderMutation = useMutation({
     mutationFn: async ({ folderId, name }: { folderId: number; name: string }) => {
       const response = await apiRequest("PATCH", `/api/folders/${folderId}`, { name });
-      if (!response.ok) throw new Error("Failed to rename playlist");
+      if (!response.ok) throw new Error("Failed to rename folder");
       return response.json();
     },
     onSuccess: (updatedFolder) => {
       queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
       toast({
-        title: "Playlist renamed",
-        description: `Playlist has been renamed to "${updatedFolder.name}".`,
+        title: "Folder renamed",
+        description: `Folder has been renamed to "${updatedFolder.name}".`,
       });
       setFolderToRename(null);
       setRenameFolderName("");
@@ -132,7 +132,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
     onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to rename playlist",
+        description: error instanceof Error ? error.message : "Failed to rename folder",
         variant: "destructive",
       });
     },
@@ -142,7 +142,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
     if (!newFolderName.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a playlist name",
+        description: "Please enter a folder name",
         variant: "destructive",
       });
       return;
@@ -160,7 +160,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
     if (!folderToRename || !renameFolderName.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a playlist name",
+        description: "Please enter a folder name",
         variant: "destructive",
       });
       return;
@@ -183,7 +183,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
             <SheetHeader>
-              <SheetTitle>Playlist</SheetTitle>
+              <SheetTitle>Folders</SheetTitle>
             </SheetHeader>
             <div className="mt-4 space-y-4">
               <Button
@@ -192,7 +192,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
                 onClick={() => setNewFolderDialog(true)}
               >
                 <FolderPlus className="h-4 w-4 mr-2" />
-                Create New Playlist
+                Create New Folder
               </Button>
 
               <div className="space-y-1">
@@ -225,14 +225,14 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
                           }}
                         >
                           <Pencil className="h-4 w-4 mr-2" />
-                          Rename Playlist
+                          Rename Folder
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => setFolderToDelete(folder)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Playlist
+                          Delete Folder
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -249,13 +249,13 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
       <Dialog open={newFolderDialog} onOpenChange={setNewFolderDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Playlist</DialogTitle>
+            <DialogTitle>Create New Folder</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Input
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Playlist name"
+              placeholder="Folder name"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -288,13 +288,13 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
       <Dialog open={!!folderToRename} onOpenChange={() => setFolderToRename(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Playlist</DialogTitle>
+            <DialogTitle>Rename Folder</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Input
               value={renameFolderName}
               onChange={(e) => setRenameFolderName(e.target.value)}
-              placeholder="New playlist name"
+              placeholder="New folder name"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -330,10 +330,10 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
+            <AlertDialogTitle>Delete Folder</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{folderToDelete?.name}"?
-              Plays inside this playlist will be moved to unorganized plays.
+              Plays inside this folder will be moved to unorganized plays.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
