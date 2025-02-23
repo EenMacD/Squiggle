@@ -45,11 +45,11 @@ interface PlayLibraryProps {
 }
 
 export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
-  const { data: folders } = useQuery<FolderType[]>({
+  const { data: folders, isLoading: foldersLoading } = useQuery<FolderType[]>({
     queryKey: ["/api/folders"],
   });
 
-  const { data: plays } = useQuery<Play[]>({
+  const { data: plays, isLoading: playsLoading } = useQuery<Play[]>({
     queryKey: ["/api/plays"],
   });
 
@@ -200,7 +200,7 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
 
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-2">
-          {/* Unorganized plays first */}
+          {/* Unorganized plays */}
           <div>
             <h3 className="text-sm font-medium mb-2">Plays</h3>
             <div className="space-y-1">
@@ -244,7 +244,18 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
 
           {/* Folders section */}
           <div>
-            <h3 className="text-sm font-medium mb-2">Folders</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium">Folders</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setNewFolderDialog(true)}
+              >
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Add Folder
+              </Button>
+            </div>
             <div className="space-y-1">
               {folders.map((folder) => (
                 <div key={folder.id} className="space-y-1">
@@ -334,6 +345,7 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Folder name"
+              autoFocus
             />
           </div>
           <DialogFooter>
@@ -346,7 +358,12 @@ export function PlayLibrary({ onPlaySelect }: PlayLibraryProps) {
             >
               Cancel
             </Button>
-            <Button onClick={handleCreateFolder}>Create</Button>
+            <Button 
+              onClick={handleCreateFolder}
+              disabled={createFolderMutation.isPending}
+            >
+              {createFolderMutation.isPending ? "Creating..." : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
