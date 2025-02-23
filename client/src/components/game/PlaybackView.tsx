@@ -22,29 +22,20 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (canvasRef.current && containerRef.current && play.keyframes.length > 0) {
+    if (canvasRef.current && containerRef.current) {
       const container = containerRef.current;
       const canvas = canvasRef.current;
-      const firstFrame = play.keyframes[0];
+      const aspectRatio = 4/3;
 
-      // Use original dimensions if available, otherwise calculate based on container
-      if (firstFrame.dimensions) {
-        const containerWidth = container.clientWidth - 32;
-        const containerHeight = (container.clientHeight - 140) * 0.9;
+      const maxWidth = container.clientWidth - 32;
+      const maxHeight = (container.clientHeight - 140) * 0.9;
+      const widthFromHeight = maxHeight * aspectRatio;
 
-        // Calculate scale to fit while maintaining aspect ratio
-        const scaleWidth = containerWidth / firstFrame.dimensions.width;
-        const scaleHeight = containerHeight / firstFrame.dimensions.height;
-        const scale = Math.min(scaleWidth, scaleHeight);
+      const width = Math.min(maxWidth, widthFromHeight);
+      const height = width / aspectRatio;
 
-        // Set canvas dimensions to match original with proper scaling
-        canvas.width = firstFrame.dimensions.width;
-        canvas.height = firstFrame.dimensions.height;
-
-        // Apply scaling through CSS transform
-        canvas.style.transform = `scale(${scale})`;
-        canvas.style.transformOrigin = 'center center';
-      }
+      canvas.width = width;
+      canvas.height = height;
 
       const engine = new GameEngine(canvas);
       engine.loadPlay(play);
@@ -180,8 +171,8 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
     <div className="relative flex flex-col gap-4 h-full bg-black" ref={containerRef}>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">{play.name}</h2>
-        <Button
-          variant="ghost"
+        <Button 
+          variant="ghost" 
           size="icon"
           onClick={onClose}
         >
