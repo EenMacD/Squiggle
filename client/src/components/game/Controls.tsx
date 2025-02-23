@@ -57,6 +57,16 @@ export function Controls({ gameEngine }: ControlsProps) {
       return;
     }
 
+    // Check if there are any players on the field before starting recording
+    if (!isRecording && Object.keys(gameEngine.getPlayers()).length === 0) {
+      toast({
+        title: "Warning",
+        description: "Please add at least one player to the field before starting recording",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const newRecordingState = gameEngine.toggleRecording();
     setIsRecording(newRecordingState);
 
