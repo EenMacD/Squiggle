@@ -87,7 +87,7 @@ export class GameEngine {
     // Calculate base positions exactly in middle of respective halves
     const attackBaseY = halfwayLine + (fieldHeight / 4); // Middle of bottom half
     const defenseBaseY = halfwayLine - (fieldHeight / 4); // Middle of top half
-    const spacing = 40; // Base spacing value
+    const spacing = 40; // Base spacing value for both directions
 
     // Calculate rows and positions
     const playersPerRow = 5;
@@ -98,10 +98,16 @@ export class GameEngine {
       const col = (existingTeamPlayers + i) % playersPerRow;
 
       const playerId = `team${team}-${this.state.players.length}`;
-      const x = fieldLeft + horizontalSpacing * (col + 2.5); // Center horizontally
+
+      // Center the group horizontally in the field
+      const totalWidth = (playersPerRow - 1) * horizontalSpacing;
+      const startX = fieldLeft + (fieldWidth - totalWidth) / 2;
+      const x = startX + horizontalSpacing * col;
+
+      // Vertically position relative to the half's center
       const y = team === 1
-        ? attackBaseY + (row * spacing)  // Moving down from middle of attack half
-        : defenseBaseY - (row * spacing); // Moving up from middle of defense half
+        ? attackBaseY + (row * spacing - Math.floor(count / playersPerRow) * spacing / 2)  // Center in attack half
+        : defenseBaseY + (row * spacing - Math.floor(count / playersPerRow) * spacing / 2); // Center in defense half
 
       this.state.players.push({
         id: playerId,
@@ -503,9 +509,9 @@ export class GameEngine {
 
     // Position first 6 players on field in a line
     const mainLineSpacing = fieldWidth / 7;
-    // Calculate y-position: halfway line for red team, middle of top half for blue team
+    // Calculate y-position: just below halfway for red team, middle of top half for blue team
     const mainLineY = team === 1
-      ? halfwayLine  // Red team on halfway line
+      ? halfwayLine + 30  // Red team slightly below halfway line
       : halfwayLine - (fieldHeight / 4);  // Blue team in middle of their half
 
     const mainLineCount = Math.min(6, playerCount);
