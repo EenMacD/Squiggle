@@ -100,7 +100,7 @@ export function Controls({ gameEngine }: ControlsProps) {
     }
 
     // If we're starting recording, check for players
-    if (!isRecording && Object.keys(gameEngine.getPlayers()).length === 0) {
+    if (!isRecording && gameEngine.state.players.length === 0) {
       setShowNoPlayersWarning(true);
       return;
     }
