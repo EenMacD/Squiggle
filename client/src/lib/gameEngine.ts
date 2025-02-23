@@ -116,10 +116,13 @@ export class GameEngine {
     const teamPlayers = this.state.players.filter(p => p.team === team);
     if (teamPlayers.length <= targetCount) return;
 
-    // Remove players from the end of the array until we reach target count
+    // Keep first N players (they were added first)
     const playersToKeep = teamPlayers.slice(0, targetCount);
+    const playerIdsToKeep = new Set(playersToKeep.map(p => p.id));
+
+    // Remove all players from this team that aren't in the keep list
     this.state.players = this.state.players.filter(p =>
-      p.team !== team || playersToKeep.includes(p)
+      p.team !== team || playerIdsToKeep.has(p.id)
     );
 
     // If a removed player had the ball, give it to the first remaining red team player
