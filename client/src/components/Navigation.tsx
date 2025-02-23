@@ -183,7 +183,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
             <SheetHeader>
-              <SheetTitle>Folders</SheetTitle>
+              <SheetTitle>Playlist</SheetTitle>
             </SheetHeader>
             <div className="mt-4 space-y-4">
               <Button
