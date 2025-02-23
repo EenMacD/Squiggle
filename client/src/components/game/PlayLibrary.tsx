@@ -110,17 +110,25 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       // Create a temporary canvas for rendering
       const canvas = document.createElement('canvas');
       const aspectRatio = 4/3;
-      canvas.width = 1200;
+      // Reduce canvas size for faster processing
+      canvas.width = 800;
       canvas.height = canvas.width / aspectRatio;
 
       // Initialize game engine with the temp canvas
       const engine = new GameEngine(canvas);
       engine.loadPlay(play);
 
+      setExportProgress(10);
+      toast({
+        title: "Export started",
+        description: "Recording play animation...",
+      });
+
       // Create a MediaRecorder to record the canvas
-      const stream = canvas.captureStream(60); // 60fps
+      const stream = canvas.captureStream(30); // Reduced to 30fps
       const recorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8'
+        mimeType: 'video/webm;codecs=vp8',
+        videoBitsPerSecond: 2500000 // 2.5 Mbps for better compression
       });
 
       const chunks: Blob[] = [];
@@ -129,13 +137,6 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       // Initialize FFmpeg
       const ffmpeg = new FFmpeg();
 
-      setExportProgress(10);
-      toast({
-        title: "Export started",
-        description: "Initializing video export...",
-      });
-
-      // Load FFmpeg with error handling
       try {
         await ffmpeg.load({
           coreURL: '/node_modules/@ffmpeg/core/dist/ffmpeg-core.js',
@@ -154,27 +155,25 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
           const webmBuffer = await webmBlob.arrayBuffer();
 
           setExportProgress(50);
-          // Write the WebM file to FFmpeg's virtual filesystem
           await ffmpeg.writeFile('input.webm', new Uint8Array(webmBuffer));
 
           setExportProgress(60);
-          // Convert WebM to MP4
+          // Optimized FFmpeg settings for faster conversion
           await ffmpeg.exec([
             '-i', 'input.webm',
             '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '22',
-            '-c:a', 'aac',
+            '-preset', 'ultrafast', // Fastest encoding
+            '-crf', '28', // Lower quality for smaller file
+            '-movflags', '+faststart', // Optimize for web playback
+            '-y', // Overwrite output
             'output.mp4'
           ]);
 
           setExportProgress(80);
-          // Read the converted file
           const data = await ffmpeg.readFile('output.mp4');
           const mp4Blob = new Blob([data], { type: 'video/mp4' });
 
           setExportProgress(90);
-          // Download the MP4 file
           const url = URL.createObjectURL(mp4Blob);
           const a = document.createElement('a');
           a.href = url;
@@ -196,7 +195,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
 
       // Start recording
       recorder.start();
-      engine.setPlaybackSpeed(1); // Normal speed for export
+      engine.setPlaybackSpeed(1);
       engine.startPlayback();
 
       // Stop recording when playback ends
