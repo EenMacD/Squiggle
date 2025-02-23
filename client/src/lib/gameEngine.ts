@@ -49,7 +49,7 @@ export class GameEngine {
 
     const initialBallState: BallState = {
       position: {
-        x: canvas.width * 0.25,
+        x: 50 + this.SIDELINE_WIDTH, // Place ball on left sideline
         y: canvas.height / 2
       },
       possessionPlayerId: null
@@ -81,6 +81,9 @@ export class GameEngine {
     const fieldMiddle = this.canvas.height / 2;
     const startX = team === 1 ? 100 : this.canvas.width - 100;
 
+    // First check if this is the first red team player being added
+    const isFirstRedPlayer = team === 1 && this.state.players.filter(p => p.team === 1).length === 0;
+
     for (let i = 0; i < count; i++) {
       const totalPlayers = existingTeamPlayers + i;
       const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
@@ -98,8 +101,8 @@ export class GameEngine {
         position
       });
 
-      // Only give ball to red team player
-      if (team === 1 && totalPlayers === 0) {
+      // Give ball to first red team player only if it's the first one being added
+      if (isFirstRedPlayer && i === 0) {
         const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
         this.state.ball.position = {
