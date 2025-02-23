@@ -26,12 +26,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFolder(insertFolder: InsertFolder): Promise<Folder> {
+    const now = new Date();
     const [folder] = await db
       .insert(folders)
       .values({
         name: insertFolder.name,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: now,
+        updatedAt: now
       })
       .returning();
     return folder;
@@ -74,12 +75,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPlay(insertPlay: InsertPlay): Promise<Play> {
+    const now = new Date();
     const [play] = await db
       .insert(plays)
       .values({
-        ...insertPlay,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        name: insertPlay.name,
+        category: insertPlay.category,
+        folderId: insertPlay.folderId,
+        keyframes: insertPlay.keyframes,
+        createdAt: now,
+        updatedAt: now
       })
       .returning();
     return play;
@@ -94,7 +99,10 @@ export class DatabaseStorage implements IStorage {
   async updatePlayFolder(playId: number, folderId: number | null): Promise<Play> {
     const [play] = await db
       .update(plays)
-      .set({ folderId })
+      .set({ 
+        folderId,
+        updatedAt: new Date()
+      })
       .where(eq(plays.id, playId))
       .returning();
     return play;
