@@ -6,8 +6,8 @@ import type { Play, Folder as FolderType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+//import { FFmpeg } from '@ffmpeg/ffmpeg'; // Removed FFmpeg import
+//import { fetchFile, toBlobURL } from '@ffmpeg/util'; // Removed FFmpeg util imports
 import {
   AlertDialog,
   AlertDialogAction,
@@ -111,7 +111,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       const canvas = document.createElement('canvas');
       const aspectRatio = 4/3;
       // Reduce canvas size for faster processing
-      canvas.width = 800;
+      canvas.width = 640; // Even smaller for better performance
       canvas.height = canvas.width / aspectRatio;
 
       // Initialize game engine with the temp canvas
@@ -124,73 +124,31 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
         description: "Recording play animation...",
       });
 
-      // Create a MediaRecorder to record the canvas
-      const stream = canvas.captureStream(30); // Reduced to 30fps
+      // Create a MediaRecorder with optimized settings
+      const stream = canvas.captureStream(24); // Reduced to 24fps for better performance
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8',
-        videoBitsPerSecond: 2500000 // 2.5 Mbps for better compression
+        videoBitsPerSecond: 1500000 // 1.5 Mbps for better compression
       });
 
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => chunks.push(e.data);
 
-      // Initialize FFmpeg
-      const ffmpeg = new FFmpeg();
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${play.name.replace(/\s+/g, '_')}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
 
-      try {
-        await ffmpeg.load({
-          coreURL: '/node_modules/@ffmpeg/core/dist/ffmpeg-core.js',
-          wasmURL: '/node_modules/@ffmpeg/core/dist/ffmpeg-core.wasm'
+        setIsExporting(false);
+        setExportProgress(100);
+        toast({
+          title: "Export complete",
+          description: "Your play animation has been downloaded as WebM format.",
         });
-        setExportProgress(20);
-      } catch (error) {
-        console.error('FFmpeg load error:', error);
-        throw new Error('Failed to initialize video converter');
-      }
-
-      recorder.onstop = async () => {
-        try {
-          setExportProgress(40);
-          const webmBlob = new Blob(chunks, { type: 'video/webm' });
-          const webmBuffer = await webmBlob.arrayBuffer();
-
-          setExportProgress(50);
-          await ffmpeg.writeFile('input.webm', new Uint8Array(webmBuffer));
-
-          setExportProgress(60);
-          // Optimized FFmpeg settings for faster conversion
-          await ffmpeg.exec([
-            '-i', 'input.webm',
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast', // Fastest encoding
-            '-crf', '28', // Lower quality for smaller file
-            '-movflags', '+faststart', // Optimize for web playback
-            '-y', // Overwrite output
-            'output.mp4'
-          ]);
-
-          setExportProgress(80);
-          const data = await ffmpeg.readFile('output.mp4');
-          const mp4Blob = new Blob([data], { type: 'video/mp4' });
-
-          setExportProgress(90);
-          const url = URL.createObjectURL(mp4Blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${play.name.replace(/\s+/g, '_')}.mp4`;
-          a.click();
-          URL.revokeObjectURL(url);
-
-          setExportProgress(100);
-          setIsExporting(false);
-          toast({
-            title: "Export complete",
-            description: "Your play animation has been downloaded as MP4.",
-          });
-        } catch (error) {
-          console.error('Conversion error:', error);
-          throw new Error('Failed to convert and save video');
-        }
       };
 
       // Start recording
@@ -257,7 +215,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
                     disabled={isExporting}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    {isExporting ? `Exporting (${exportProgress}%)...` : "Download MP4"}
+                    {isExporting ? `Exporting (${exportProgress}%)...` : "Download WebM"} {/* Changed to Download WebM */}
                   </DropdownMenuItem>
                   {folders?.filter(f => f.id !== folderId).map(folder => (
                     <DropdownMenuItem
