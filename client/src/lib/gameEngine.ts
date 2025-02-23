@@ -469,9 +469,9 @@ export class GameEngine {
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.fillStyle = 'white';
-        const numberY = player.team === 1 
-          ? player.position.y + this.TOKEN_RADIUS + 12  // Below red players
-          : player.position.y - this.TOKEN_RADIUS - 4;  // Above blue players
+        const numberY = player.team === 1
+          ? player.position.y + this.TOKEN_RADIUS + 4  // Just below red players
+          : player.position.y - this.TOKEN_RADIUS - 4;  // Just above blue players
         this.ctx.fillText(player.number.toString(), player.position.x, numberY);
       }
     });
