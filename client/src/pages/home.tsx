@@ -7,28 +7,26 @@ import type { Play } from "@shared/schema";
 
 export default function Home() {
   const [selectedPlay, setSelectedPlay] = useState<Play | null>(null);
-  const [showPlayList, setShowPlayList] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       <Navigation 
-        showPlayList={showPlayList}
-        onTogglePlayList={() => setShowPlayList(!showPlayList)}
+        selectedFolderId={selectedFolderId}
+        onFolderSelect={setSelectedFolderId}
       />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <div
-          className={`
-            transition-all duration-300 ease-in-out
-            ${showPlayList ? 'w-64' : 'w-0'}
-            border-r border-border overflow-hidden
-          `}
-        >
-          <div className="w-64 h-full">
-            <PlayLibrary onPlaySelect={setSelectedPlay} />
+        {/* Sidebar - only shown when a folder is selected */}
+        {selectedFolderId !== null && (
+          <div className="w-64 border-r border-border">
+            <PlayLibrary 
+              folderId={selectedFolderId} 
+              onPlaySelect={setSelectedPlay}
+              onClose={() => setSelectedFolderId(null)}
+            />
           </div>
-        </div>
+        )}
 
         {/* Main content */}
         <div className="flex-1 flex flex-col p-2">

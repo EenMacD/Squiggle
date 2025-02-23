@@ -90,7 +90,11 @@ export function Controls({ gameEngine }: ControlsProps) {
       };
 
       const response = await apiRequest("POST", "/api/plays", playData);
-      const result = await response.json();
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || "Failed to save play");
+      }
 
       await queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
 
@@ -112,8 +116,6 @@ export function Controls({ gameEngine }: ControlsProps) {
       });
     }
   };
-
-  const hasFolders = folders && folders.length > 0;
 
   return (
     <>
@@ -153,24 +155,21 @@ export function Controls({ gameEngine }: ControlsProps) {
                 autoFocus
               />
             </div>
-            {hasFolders && (
-              <div className="space-y-2">
-                <Label htmlFor="folder">Save to Folder (Optional)</Label>
-                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a folder" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Play List</SelectItem>
-                    {folders.map(folder => (
-                      <SelectItem key={folder.id} value={folder.id.toString()}>
-                        {folder.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="folder">Save to Folder (Required)</Label>
+              <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  {folders?.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id.toString()}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -183,7 +182,12 @@ export function Controls({ gameEngine }: ControlsProps) {
             >
               Cancel
             </Button>
-            <Button onClick={handleSavePlay}>Save Play</Button>
+            <Button 
+              onClick={handleSavePlay}
+              disabled={!selectedFolderId || !playName.trim()}
+            >
+              Save Play
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

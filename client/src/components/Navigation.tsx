@@ -24,11 +24,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Folder as FolderType } from "@shared/schema";
 
 interface NavigationProps {
-  showPlayList: boolean;
-  onTogglePlayList: () => void;
+  selectedFolderId: number | null;
+  onFolderSelect: (folderId: number | null) => void;
 }
 
-export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) {
+export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps) {
   const [newFolderDialog, setNewFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const { toast } = useToast();
@@ -91,45 +91,35 @@ export function Navigation({ showPlayList, onTogglePlayList }: NavigationProps) 
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
             <SheetHeader>
-              <SheetTitle>Menu</SheetTitle>
+              <SheetTitle>Folders</SheetTitle>
             </SheetHeader>
-            <div className="mt-4 space-y-1">
-              {/* Play List Directory Option */}
+            <div className="mt-4 space-y-4">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setNewFolderDialog(true)}
+              >
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Create New Folder
+              </Button>
+
               <div className="space-y-1">
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start",
-                    showPlayList && "bg-accent"
-                  )}
-                  onClick={onTogglePlayList}
-                >
-                  Play List
-                </Button>
-                {/* Add Folder Option */}
-                {showPlayList && (
-                  <>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start pl-8 text-sm"
-                      onClick={() => setNewFolderDialog(true)}
-                    >
-                      <FolderPlus className="h-4 w-4 mr-2" />
-                      Add Folder
-                    </Button>
-                    {/* Show folders */}
-                    {folders?.map((folder) => (
-                      <Button
-                        key={folder.id}
-                        variant="ghost"
-                        className="w-full justify-start pl-8 text-sm"
-                      >
-                        <Folder className="h-4 w-4 mr-2" />
-                        {folder.name}
-                      </Button>
-                    ))}
-                  </>
-                )}
+                {folders?.map((folder) => (
+                  <Button
+                    key={folder.id}
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start",
+                      selectedFolderId === folder.id && "bg-accent"
+                    )}
+                    onClick={() => onFolderSelect(
+                      selectedFolderId === folder.id ? null : folder.id
+                    )}
+                  >
+                    <Folder className="h-4 w-4 mr-2" />
+                    {folder.name}
+                  </Button>
+                ))}
               </div>
             </div>
           </SheetContent>
