@@ -31,7 +31,7 @@ export interface GameState {
 export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private state: GameState;
+  public state: GameState; // Made public for Controls component to access
   private isDragging: boolean = false;
   private playbackInterval: number | null = null;
   private currentKeyFrameIndex: number = 0;

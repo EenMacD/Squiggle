@@ -48,7 +48,7 @@ export function Canvas() {
       }
 
       if (e.code === 'Enter' && tokenDialog.count > 0) {
-        gameEngine.spawnTokens(tokenDialog.team);
+        gameEngine.spawnTokens(tokenDialog.team, tokenDialog.count);
         setTokenDialog(prev => ({ ...prev, isOpen: false, count: 0 }));
       }
     };
@@ -115,15 +115,6 @@ export function Canvas() {
     setTokenDialog(prev => ({ ...prev, isOpen: false, count: 0 }));
   };
 
-  const handleDefaultPositions = () => {
-    if (!gameEngine) return;
-    gameEngine.setDefaultPositions();
-    toast({
-      title: "Default Positions",
-      description: "Players have been arranged in their default positions"
-    });
-  };
-
   return (
     <div className="flex flex-col gap-4">
       <div className="relative">
@@ -138,15 +129,7 @@ export function Canvas() {
       </div>
       <div className="flex justify-center mt-4 gap-4">
         {gameEngine && (
-          <>
-            <Controls gameEngine={gameEngine} />
-            <Button
-              variant="outline"
-              onClick={handleDefaultPositions}
-            >
-              Default Positions
-            </Button>
-          </>
+          <Controls gameEngine={gameEngine} />
         )}
       </div>
 
