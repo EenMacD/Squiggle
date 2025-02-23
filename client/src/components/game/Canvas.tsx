@@ -4,13 +4,12 @@ import { Controls } from "./Controls";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2 } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 
 interface TokenDialogState {
   isOpen: boolean;
   team: 1 | 2;
   count: number;
-  mode: 'add' | 'remove';
 }
 
 export function Canvas() {
@@ -21,8 +20,7 @@ export function Canvas() {
   const [tokenDialog, setTokenDialog] = useState<TokenDialogState>({
     isOpen: false,
     team: 1,
-    count: 0,
-    mode: 'add'
+    count: 0
   });
 
   useEffect(() => {
@@ -31,10 +29,12 @@ export function Canvas() {
       const canvas = canvasRef.current;
       const aspectRatio = 4/3;
 
-      const maxWidth = container.clientWidth - 32;
-      const maxHeight = (container.clientHeight - 140) * 0.9;
+      // Calculate maximum possible width while maintaining aspect ratio
+      const maxWidth = container.clientWidth - 32; // Account for padding
+      const maxHeight = (container.clientHeight - 140) * 0.9; // Account for controls and padding
       const widthFromHeight = maxHeight * aspectRatio;
 
+      // Use the smaller of the two possible dimensions
       const width = Math.min(maxWidth, widthFromHeight);
       const height = width / aspectRatio;
 
@@ -60,11 +60,7 @@ export function Canvas() {
       }
 
       if (e.code === 'Enter' && tokenDialog.count > 0) {
-        if (tokenDialog.mode === 'add') {
-          gameEngine.spawnTokens(tokenDialog.team, tokenDialog.count);
-        } else {
-          gameEngine.removeTokens(tokenDialog.team, tokenDialog.count);
-        }
+        gameEngine.spawnTokens(tokenDialog.team, tokenDialog.count);
         setTokenDialog(prev => ({ ...prev, isOpen: false, count: 0 }));
       }
     };
@@ -83,39 +79,21 @@ export function Canvas() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Click handling for bottom controls
-    const controlsY = canvasRef.current.height - 30;
-    if (y > controlsY - 20 && y < controlsY + 20) {
-      const halfWidth = canvasRef.current.width / 2;
-      // Default positions button (left side)
-      if (x > halfWidth - 100 && x < halfWidth - 20) {
-        if (gameEngine) {
-          gameEngine.resetToDefaultPositions();
-        }
-        return;
-      }
-      // Bin buttons
-      const team1BinX = halfWidth + 20;
-      const team2BinX = halfWidth + 60;
-      if (x > team1BinX - 15 && x < team1BinX + 15) {
+    // Check if clicking on a token counter
+    const counterY = canvasRef.current.height - 50;
+    [1, 2].forEach(team => {
+      const counterX = team === 1 ? 50 : canvasRef.current!.width - 50;
+      const dx = x - counterX;
+      const dy = y - counterY;
+      if (Math.sqrt(dx * dx + dy * dy) < 15) {
         setTokenDialog({
           isOpen: true,
-          team: 1,
-          count: 0,
-          mode: 'remove'
+          team: team as 1 | 2,
+          count: 0
         });
         return;
       }
-      if (x > team2BinX - 15 && x < team2BinX + 15) {
-        setTokenDialog({
-          isOpen: true,
-          team: 2,
-          count: 0,
-          mode: 'remove'
-        });
-        return;
-      }
-    }
+    });
 
     gameEngine.startDragging(x, y);
   };
@@ -143,13 +121,9 @@ export function Canvas() {
     gameEngine.stopDragging();
   };
 
-  const handleTokenAction = () => {
+  const handleSpawnTokens = () => {
     if (!gameEngine || tokenDialog.count === 0) return;
-    if (tokenDialog.mode === 'add') {
-      gameEngine.spawnTokens(tokenDialog.team, tokenDialog.count);
-    } else {
-      gameEngine.removeTokens(tokenDialog.team, tokenDialog.count);
-    }
+    gameEngine.spawnTokens(tokenDialog.team, tokenDialog.count);
     setTokenDialog(prev => ({ ...prev, isOpen: false, count: 0 }));
   };
 
@@ -178,7 +152,7 @@ export function Canvas() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {tokenDialog.mode === 'add' ? 'Add' : 'Remove'} {tokenDialog.team === 1 ? "Red" : "Blue"} Players
+              Add {tokenDialog.team === 1 ? "Red" : "Blue"} Players
             </DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center gap-4 py-4">
@@ -215,8 +189,8 @@ export function Canvas() {
             >
               Cancel
             </Button>
-            <Button onClick={handleTokenAction}>
-              {tokenDialog.mode === 'add' ? 'Add' : 'Remove'} Players
+            <Button onClick={handleSpawnTokens}>
+              Add Players
             </Button>
           </DialogFooter>
         </DialogContent>

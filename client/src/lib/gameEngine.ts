@@ -1,5 +1,3 @@
-import type { Play } from "@shared/schema";
-
 export interface Position {
   x: number;
   y: number;
@@ -33,14 +31,16 @@ export interface GameState {
 export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  public state: GameState;
+  public state: GameState; // Made public for Controls component to access
   private isDragging: boolean = false;
   private playbackInterval: number | null = null;
   private currentKeyFrameIndex: number = 0;
   private animationFrameId: number | null = null;
   private playbackSpeed: number = 1;
   private lastFrameTime: number = 0;
+  private readonly TOKEN_SPACING = 40;
   private readonly TOKEN_RADIUS = 15;
+  private readonly TOKENS_PER_ROW = 3;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -71,15 +71,34 @@ export class GameEngine {
     if (count <= 0) return;
 
     const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
-    const startX = team === 1 ? this.canvas.width * 0.25 : this.canvas.width * 0.75;
-    const spacing = 40;
+    const startX = team === 1 ? 100 : this.canvas.width - 100;
+    const startY = this.canvas.height - 100;
 
     for (let i = 0; i < count; i++) {
+      const totalPlayers = existingTeamPlayers + i;
       const playerId = `team${team}-${this.state.players.length}`;
-      const position = {
-        x: startX + ((i - Math.floor(count/2)) * spacing),
-        y: this.canvas.height / 2 // Place on halfway line
-      };
+
+      let position: Position;
+      if (totalPlayers < 6) {
+        // First 6 players go in default bottom area
+        const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
+        const col = totalPlayers % this.TOKENS_PER_ROW;
+        position = {
+          x: startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1),
+          y: startY - (row * this.TOKEN_SPACING)
+        };
+      } else {
+        // Additional players go on sidelines
+        const sidelineStartY = 100; // Start below the top margin
+        const sidelineX = team === 1 ? 25 : this.canvas.width - 25; // Position on respective sideline
+        const sidelinePlayers = totalPlayers - 6; // Number of players on sideline
+        const sidelineRow = Math.floor(sidelinePlayers / 2); // Two players per row
+        const sidelineCol = sidelinePlayers % 2;
+        position = {
+          x: sidelineX + (sidelineCol * 30) * (team === 1 ? 1 : -1), // Offset by column
+          y: sidelineStartY + (sidelineRow * 40) // Move down by row
+        };
+      }
 
       this.state.players.push({
         id: playerId,
@@ -101,112 +120,24 @@ export class GameEngine {
     this.render();
   }
 
-  public removeTokens(team: 1 | 2, count: number) {
-    const teamPlayers = this.state.players.filter(p => p.team === team);
-    if (count <= 0 || teamPlayers.length === 0) return;
-
-    // Calculate how many players to remove
-    const removeCount = Math.min(count, teamPlayers.length);
-    const playersToRemove = teamPlayers.slice(-removeCount);
-
-    // If a player being removed has the ball, give it to the nearest remaining player
-    const removedWithBall = playersToRemove.find(p => p.id === this.state.ball.possessionPlayerId);
-    if (removedWithBall) {
-      const remainingPlayers = this.state.players.filter(p => !playersToRemove.includes(p));
-      if (remainingPlayers.length > 0) {
-        const nearestPlayer = this.findNearestPlayer(
-          removedWithBall.position.x,
-          removedWithBall.position.y,
-          remainingPlayers
-        );
-        if (nearestPlayer) {
-          this.state.ball.possessionPlayerId = nearestPlayer.id;
-          const offset = 25;
-          this.state.ball.position = {
-            x: nearestPlayer.position.x + offset,
-            y: nearestPlayer.position.y - offset
-          };
-        }
-      } else {
-        this.state.ball.possessionPlayerId = null;
-      }
-    }
-
-    // Remove the players
-    this.state.players = this.state.players.filter(p => !playersToRemove.includes(p));
-    this.render();
-  }
-
-  private findNearestPlayer(x: number, y: number, players = this.state.players): Player | null {
-    let nearest: Player | null = null;
-    let minDistance = Infinity;
-
-    players.forEach(player => {
-      const dx = player.position.x - x;
-      const dy = player.position.y - y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < minDistance && distance < 20) {
-        minDistance = distance;
-        nearest = player;
-      }
-    });
-
-    return nearest;
-  }
-
-  public resetToDefaultPositions() {
-    // Field dimensions (accounting for margins)
-    const fieldLeft = 50;
-    const fieldRight = this.canvas.width - 50;
-    const fieldMiddle = this.canvas.height / 2;
-
-    // Get players for each team
-    const team1Players = this.state.players.filter(p => p.team === 1);
-    const team2Players = this.state.players.filter(p => p.team === 2);
-
-    // Position team 1 (left side)
-    const spacing1 = team1Players.length > 1 ? 
-      (this.canvas.width/2 - 100) / (team1Players.length - 1) : 0;
-    team1Players.forEach((player, i) => {
-      player.position = {
-        x: fieldLeft + 50 + (i * spacing1),
-        y: fieldMiddle
-      };
-
-      // Give ball to center player of team 1
-      if (i === Math.floor(team1Players.length/2)) {
-        this.state.ball.possessionPlayerId = player.id;
-        this.state.ball.position = {
-          x: player.position.x + 25,
-          y: player.position.y - 25
-        };
-      }
-    });
-
-    // Position team 2 (right side)
-    const spacing2 = team2Players.length > 1 ? 
-      (this.canvas.width/2 - 100) / (team2Players.length - 1) : 0;
-    team2Players.forEach((player, i) => {
-      player.position = {
-        x: fieldRight - 50 - (i * spacing2),
-        y: fieldMiddle
-      };
-    });
-
-    this.render();
-  }
-
   public startDragging(x: number, y: number) {
     // Check for default position button clicks
-    const bottomY = this.canvas.height - 30;
-    const halfWidth = this.canvas.width / 2;
+    const bottomY = this.canvas.height - 80; // Moved up above the bottom line
+    [1, 2].forEach((team: 1 | 2) => {
+      const isTeam1 = team === 1;
+      const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
+      const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
 
-    if (x >= halfWidth - 100 && x <= halfWidth - 20 &&
-        y >= bottomY - 15 && y <= bottomY + 15) {
-      this.resetToDefaultPositions();
-      return;
-    }
+      // Only check for button click if there are players for this team
+      if (this.state.players.filter(p => p.team === team).length > 0) {
+        if (x >= defaultBtnX - 40 && x <= defaultBtnX + 40 &&
+            y >= bottomY - 15 && y <= bottomY + 15) {
+          this.setDefaultPositions(team);
+          return;
+        }
+      }
+    });
+
     // Check if we're clicking on the ball
     if (this.checkBallClick(x, y)) return;
 
@@ -219,7 +150,6 @@ export class GameEngine {
       this.render();
     }
   }
-
 
   private checkBallClick(x: number, y: number): boolean {
     const ballRadius = 20;
@@ -323,6 +253,24 @@ export class GameEngine {
     this.render();
   }
 
+  private findNearestPlayer(x: number, y: number): Player | null {
+    let nearest: Player | null = null;
+    let minDistance = Infinity;
+
+    this.state.players.forEach(player => {
+      const dx = player.position.x - x;
+      const dy = player.position.y - y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance && distance < 20) {
+        minDistance = distance;
+        nearest = player;
+      }
+    });
+
+    return nearest;
+  }
+
   public toggleRecording(): boolean {
     this.state.isRecording = !this.state.isRecording;
 
@@ -348,6 +296,7 @@ export class GameEngine {
     });
   }
 
+
   private recordKeyFrame() {
     const positions: Record<string, Position> = {};
     this.state.players.forEach(player => {
@@ -365,7 +314,7 @@ export class GameEngine {
     return this.state.keyFrames;
   }
 
-  public loadPlay(play: Play) {
+  public loadPlay(play: { keyframes: Array<{ timestamp: number; positions: Record<string, Position>; ball: BallState }> }) {
     this.state.keyFrames = play.keyframes;
     this.currentKeyFrameIndex = 0;
     if (this.state.keyFrames.length > 0) {
@@ -449,56 +398,67 @@ export class GameEngine {
     this.ctx.fillStyle = '#000000';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Main field rectangle
+    // Extended sidelines
     this.ctx.strokeStyle = 'white';
     this.ctx.lineWidth = 2;
+
+    // Main field rectangle
     this.ctx.strokeRect(50, 50, this.canvas.width - 100, this.canvas.height - 100);
 
+    // Extended sideline areas (10 units wider on each side)
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
+    this.ctx.beginPath();
+    // Left extended area
+    this.ctx.strokeRect(15, 50, 25, this.canvas.height - 100);
+    // Right extended area
+    this.ctx.strokeRect(this.canvas.width - 40, 50, 25, this.canvas.height - 100);
+
     // Center line
+    this.ctx.strokeStyle = 'white';
     this.ctx.beginPath();
     this.ctx.moveTo(50, this.canvas.height / 2);
     this.ctx.lineTo(this.canvas.width - 50, this.canvas.height / 2);
     this.ctx.stroke();
 
-    // Draw default position and bin buttons
-    const buttonY = this.canvas.height - 30;
-    const halfWidth = this.canvas.width / 2;
+    // Draw token spawners and default position buttons
+    [1, 2].forEach((team: 1 | 2) => {
+      const isTeam1 = team === 1;
+      const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
+      const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
+      const spawnerY = this.canvas.height - 50;
+      const buttonY = this.canvas.height - 80; // Default button positioned above the line
 
-    // Default positions button
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    this.ctx.beginPath();
-    this.ctx.roundRect(halfWidth - 100, buttonY - 15, 80, 30, 5);
-    this.ctx.fill();
-    this.ctx.strokeStyle = 'white';
-    this.ctx.strokeRect(halfWidth - 100, buttonY - 15, 80, 30);
-
-    this.ctx.fillStyle = 'white';
-    this.ctx.font = '12px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText('Default positions', halfWidth - 60, buttonY);
-
-    // Draw bin buttons for each team
-    [1, 2].forEach((team, i) => {
-      const binX = halfWidth + 20 + (i * 40);
+      // Draw token spawner
       this.ctx.beginPath();
-      this.ctx.arc(binX, buttonY, 15, 0, Math.PI * 2);
-      this.ctx.fillStyle = team === 1 ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
+      this.ctx.arc(spawnerX, spawnerY, this.TOKEN_RADIUS, 0, Math.PI * 2);
+      this.ctx.fillStyle = isTeam1 ? 'red' : 'blue';
       this.ctx.fill();
+
+      // Draw + symbol
       this.ctx.strokeStyle = 'white';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(spawnerX - 5, spawnerY);
+      this.ctx.lineTo(spawnerX + 5, spawnerY);
+      this.ctx.moveTo(spawnerX, spawnerY - 5);
+      this.ctx.lineTo(spawnerX, spawnerY + 5);
       this.ctx.stroke();
 
-      // Draw bin icon
-      this.ctx.beginPath();
-      this.ctx.moveTo(binX - 5, buttonY - 5);
-      this.ctx.lineTo(binX + 5, buttonY - 5);
-      this.ctx.moveTo(binX - 3, buttonY - 5);
-      this.ctx.lineTo(binX - 3, buttonY + 5);
-      this.ctx.moveTo(binX + 3, buttonY - 5);
-      this.ctx.lineTo(binX + 3, buttonY + 5);
-      this.ctx.strokeStyle = 'white';
-      this.ctx.lineWidth = 1;
-      this.ctx.stroke();
+      // Draw default position button if there are players
+      if (this.state.players.filter(p => p.team === team).length > 0) {
+        this.ctx.fillStyle = isTeam1 ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 0, 255, 0.2)';
+        this.ctx.beginPath();
+        this.ctx.roundRect(defaultBtnX - 40, buttonY - 15, 80, 30, 5);
+        this.ctx.fill();
+        this.ctx.strokeStyle = 'white';
+        this.ctx.strokeRect(defaultBtnX - 40, buttonY - 15, 80, 30);
+
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('Default', defaultBtnX, buttonY);
+      }
     });
 
     // Draw players
@@ -556,38 +516,55 @@ export class GameEngine {
     return this.state.isRecording;
   }
 
-
-  public setDefaultPositions(team: 1 | 2) {
+  private setDefaultPositions(team: 1 | 2) {
     // Field dimensions (accounting for margins)
     const fieldLeft = 50;
     const fieldRight = this.canvas.width - 50;
+    const fieldTop = 50;
     const fieldMiddle = this.canvas.height / 2;
+    const defenseLineY = fieldMiddle - (fieldMiddle - fieldTop) / 2;
+    const spacing = (fieldRight - fieldLeft) / 7; // Divide field into 7 sections for 6 players
 
     // Remove existing players of the specified team
     this.state.players = this.state.players.filter(p => p.team !== team);
 
-    // Add players to the specified team along the middle line
-    for (let i = 0; i < 6; i++) {
-      const x = fieldLeft + (i * ((fieldRight - fieldLeft) / 5));
-      const playerId = `team${team}-${i}`;
-      this.state.players.push({
-        id: playerId,
-        team: team,
-        position: {
-          x,
-          y: fieldMiddle
-        }
-      });
+    if (team === 1) {
+      // Add red team (attack) along the middle line
+      for (let i = 0; i < 6; i++) {
+        const x = fieldLeft + spacing + (i * spacing);
+        const playerId = `team1-${i}`;
+        this.state.players.push({
+          id: playerId,
+          team: 1,
+          position: {
+            x,
+            y: fieldMiddle
+          }
+        });
 
-      // Give the ball to the third player (index 2)
-      if (i === 2) {
-        this.state.ball.possessionPlayerId = playerId;
-        this.state.ball.position = {
-          x: x + 25,
-          y: fieldMiddle - 25
-        };
+        // Give the ball to the third player (index 2)
+        if (i === 2) {
+          this.state.ball.possessionPlayerId = playerId;
+          this.state.ball.position = {
+            x: x + 25,
+            y: fieldMiddle - 25
+          };
+        }
+      }
+    } else {
+      // Add blue team (defense) between middle and top
+      for (let i = 0; i < 6; i++) {
+        this.state.players.push({
+          id: `team2-${i}`,
+          team: 2,
+          position: {
+            x: fieldLeft + spacing + (i * spacing),
+            y: defenseLineY
+          }
+        });
       }
     }
+
     this.render();
   }
 }
