@@ -153,7 +153,7 @@ export class GameEngine {
     [1, 2].forEach((team: 1 | 2) => {
       const isTeam1 = team === 1;
       const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
-      const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
+      const defaultBtnX = isTeam1 ? 50 + this.SIDELINE_WIDTH : this.canvas.width - 50 - this.SIDELINE_WIDTH; // Align with sidelines
       const binBtnX = isTeam1 ? defaultBtnX + 90 : defaultBtnX - 90;
       const buttonY = this.canvas.height - 30; // Default button positioned above the line
 
@@ -443,7 +443,7 @@ export class GameEngine {
     [1, 2].forEach((team: 1 | 2) => {
       const isTeam1 = team === 1;
       const spawnerX = isTeam1 ? 50 : this.canvas.width - 50;
-      const defaultBtnX = isTeam1 ? spawnerX + 90 : spawnerX - 90;
+      const defaultBtnX = isTeam1 ? 50 + this.SIDELINE_WIDTH : this.canvas.width - 50 - this.SIDELINE_WIDTH;
       const binBtnX = isTeam1 ? defaultBtnX + 90 : defaultBtnX - 90;
       const spawnerY = this.canvas.height - 50;
       const buttonY = this.canvas.height - 30; // Moved below the bottom line
@@ -604,7 +604,7 @@ export class GameEngine {
 
     // Place remaining players on sideline spread evenly
     if (playerCount > 6) {
-      const sidelineX = team === 1 ? 25 : this.canvas.width - 25;
+      const sidelineX = team === 1 ? fieldLeft : fieldRight;  // Align with actual sidelines
       const remainingPlayers = playerCount - 6;
       const sidelineStartY = fieldTop + 100;
       const sidelineEndY = this.canvas.height - 100;
