@@ -70,15 +70,15 @@ export class GameEngine {
     if (count <= 0) return;
 
     const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
-    if (existingTeamPlayers + count > 5) {
-      count = 5 - existingTeamPlayers; // Limit to 5 players per team
+    if (existingTeamPlayers + count > 20) {
+      count = 20 - existingTeamPlayers; // Allow up to 20 players per team
       if (count <= 0) return;
     }
 
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
     const fieldWidth = fieldRight - fieldLeft;
-    const spacing = fieldWidth / 6; // Divide field into 6 segments for 5 players
+    const spacing = fieldWidth / (count + 1); // Even spacing for the new players
 
     // Y position based on team (attack at bottom, defense at top)
     const attackY = this.canvas.height - 150; // Bottom half
@@ -88,7 +88,7 @@ export class GameEngine {
     // Add players in a row
     for (let i = 0; i < count; i++) {
       const playerId = `team${team}-${this.state.players.length}`;
-      const x = fieldLeft + spacing * (i + 1); // Start from first segment
+      const x = fieldLeft + spacing * (i + 1); // Evenly space players across field width
 
       this.state.players.push({
         id: playerId,
@@ -96,7 +96,7 @@ export class GameEngine {
         position: { x, y }
       });
 
-      // Give ball to center attacker if it's the first red team player
+      // Give ball to center player if it's the first red team player
       if (team === 1 && this.state.players.filter(p => p.team === 1).length === 1) {
         const offset = 25;
         this.state.ball.possessionPlayerId = playerId;
@@ -480,9 +480,9 @@ export class GameEngine {
   private setDefaultPositions(team: 1 | 2) {
     const fieldLeft = 50 + this.SIDELINE_WIDTH;
     const fieldRight = this.canvas.width - 50 - this.SIDELINE_WIDTH;
+    const fieldWidth = fieldRight - fieldLeft;
     const fieldTop = 50;
-    const fieldMiddle = this.canvas.height / 2;
-    const blueDefaultY = fieldMiddle - (fieldMiddle - fieldTop) / 2;
+    const fieldBottom = this.canvas.height - 100;
 
     // Get existing players for this team
     const teamPlayers = this.state.players.filter(p => p.team === team);
@@ -493,50 +493,50 @@ export class GameEngine {
     // Remove existing players of the specified team
     this.state.players = this.state.players.filter(p => p.team !== team);
 
-    // Calculate spacing for main line (up to 6 players)
-    const mainLineCount = Math.min(6, playerCount);
-    const spacing = (fieldRight - fieldLeft) / (mainLineCount + 1);
+    // Position first 6 players on field in a line
+    const mainLineSpacing = fieldWidth / 7; // 7 segments for 6 players
+    const mainLineY = team === 1 ? fieldBottom - 100 : fieldTop + 100;
 
-    // Add players to main line (up to 6)
+    const mainLineCount = Math.min(6, playerCount);
     for (let i = 0; i < mainLineCount; i++) {
-      const x = fieldLeft + spacing * (i + 1);
+      const x = fieldLeft + mainLineSpacing * (i + 1);
       const playerId = `team${team}-${i}`;
 
       this.state.players.push({
         id: playerId,
         team,
-        position: {
-          x,
-          y: team === 1 ? fieldMiddle : blueDefaultY // Red on halfway, Blue between halfway and top
-        }
+        position: { x, y: mainLineY }
       });
 
-      // Give the ball to the middle player (index 2 or 3)
-      if (i === Math.floor(mainLineCount / 2)) {
+      // Give ball to center player (3rd player) of attack team
+      if (team === 1 && i === 2) {
         this.state.ball.possessionPlayerId = playerId;
+        const offset = 25;
         this.state.ball.position = {
-          x: x + 25,
-          y: (team === 1 ? fieldMiddle : blueDefaultY) - 25
+          x: Math.min(fieldRight - offset, x + offset),
+          y: Math.max(fieldTop + offset, mainLineY - offset)
         };
       }
     }
 
-    // Place remaining players on sideline spread evenly
+    // Position remaining players as substitutes in rows of 2
     if (playerCount > 6) {
-      const sidelineX = team === 1 ? fieldLeft : fieldRight;  // Align with actual sidelines
       const remainingPlayers = playerCount - 6;
-      const sidelineStartY = fieldTop + 100;
-      const sidelineEndY = this.canvas.height - 100;
-      const sidelineHeight = sidelineEndY - sidelineStartY;
-      const verticalSpacing = sidelineHeight / (remainingPlayers + 1);
+      const subsPerRow = 2;
+      const rowCount = Math.ceil(remainingPlayers / subsPerRow);
+      const sidelineX = team === 1 ? fieldLeft - 30 : fieldRight + 30; // Position just outside field
 
       for (let i = 0; i < remainingPlayers; i++) {
+        const row = Math.floor(i / subsPerRow);
+        const col = i % subsPerRow;
+        const spacing = 40; // Space between substitute players
+
         this.state.players.push({
           id: `team${team}-${i + 6}`,
           team,
           position: {
-            x: sidelineX,
-            y: sidelineStartY + verticalSpacing * (i + 1)
+            x: sidelineX + (col * spacing) * (team === 1 ? 1 : -1),
+            y: fieldTop + 150 + (row * spacing)
           }
         });
       }
@@ -544,6 +544,7 @@ export class GameEngine {
 
     this.render();
   }
+
   // Add this method to the GameEngine class
   public isPlaybackActive(): boolean {
     return this.animationFrameId !== null && this.currentKeyFrameIndex < this.state.keyFrames.length;
