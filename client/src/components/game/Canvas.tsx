@@ -12,11 +12,10 @@ interface TokenDialogState {
   count: number;
 }
 
-// Add new interface for remove players dialog
+// Update RemovePlayersDialog interface
 interface RemovePlayersDialogState {
   isOpen: boolean;
   team: 1 | 2;
-  count: number;
 }
 
 export function Canvas() {
@@ -31,8 +30,7 @@ export function Canvas() {
   });
   const [removePlayersDialog, setRemovePlayersDialog] = useState<RemovePlayersDialogState>({
     isOpen: false,
-    team: 1,
-    count: 0
+    team: 1
   });
 
   useEffect(() => {
@@ -109,11 +107,9 @@ export function Canvas() {
       // Check for bin button
       if (x >= binBtnX - 15 && x <= binBtnX + 15 &&
           y >= buttonY - 15 && y <= buttonY + 15) {
-        const teamPlayers = gameEngine.state.players.filter(p => p.team === team).length;
         setRemovePlayersDialog({
           isOpen: true,
-          team: team as 1 | 2,
-          count: teamPlayers
+          team: team as 1 | 2
         });
         return;
       }
@@ -165,13 +161,12 @@ export function Canvas() {
   };
 
   const handleRemovePlayers = () => {
-    if (!gameEngine || removePlayersDialog.count === 0) {
+    if (!gameEngine) {
       setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
       return;
     }
 
-    // Pass the exact count of players we want to keep
-    gameEngine.removePlayersFromTeam(removePlayersDialog.team, removePlayersDialog.count);
+    gameEngine.removePlayersFromTeam(removePlayersDialog.team, 0);
     setRemovePlayersDialog(prev => ({ ...prev, isOpen: false }));
   };
 
@@ -244,7 +239,7 @@ export function Canvas() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Remove Players Dialog */}
+      {/* Remove Players Confirmation Dialog */}
       <Dialog 
         open={removePlayersDialog.isOpen} 
         onOpenChange={(open) => setRemovePlayersDialog(prev => ({ ...prev, isOpen: open }))}
@@ -252,24 +247,11 @@ export function Canvas() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Reduce {removePlayersDialog.team === 1 ? "Red" : "Blue"} Players
+              Remove {removePlayersDialog.team === 1 ? "Red" : "Blue"} Players
             </DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center gap-4 py-4">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setRemovePlayersDialog(prev => ({
-                ...prev,
-                count: Math.max(0, prev.count - 1)
-              }))}
-              disabled={removePlayersDialog.count === 0}
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <span className="text-2xl font-bold w-12 text-center">
-              {removePlayersDialog.count}
-            </span>
+          <div className="py-4 text-center">
+            <p>Are you sure you want to remove all players from this team?</p>
           </div>
           <DialogFooter>
             <Button
@@ -278,8 +260,11 @@ export function Canvas() {
             >
               Cancel
             </Button>
-            <Button onClick={handleRemovePlayers}>
-              Remove Players
+            <Button 
+              variant="destructive"
+              onClick={handleRemovePlayers}
+            >
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>
