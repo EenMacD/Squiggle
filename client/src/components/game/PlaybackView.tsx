@@ -19,7 +19,7 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
       const aspectRatio = 4/3;
-      canvas.width = 1200; // Increased by 50% to match main field
+      canvas.width = 1200; // Match main field size
       canvas.height = canvas.width / aspectRatio;
 
       engineRef.current = new GameEngine(canvas);
