@@ -40,6 +40,7 @@ export class GameEngine {
   private lastFrameTime: number = 0;
   private readonly TOKEN_RADIUS = 15;
   private readonly SIDELINE_WIDTH = 50;
+  private readonly BALL_RADIUS = 15; // Reduced from 20
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -82,18 +83,18 @@ export class GameEngine {
     // Y positions for rows with reduced spacing
     const attackBaseY = this.canvas.height - 200; // Bottom half base position
     const defenseBaseY = 150; // Top half base position
-    const rowSpacing = 30; // Reduced vertical space between rows
+    const rowSpacing = 25; // Reduced vertical space between rows
 
     // Calculate rows and positions
     const playersPerRow = 5;
-    const horizontalSpacing = fieldWidth / 8; // 8 segments for 5 players (closer together)
+    const horizontalSpacing = fieldWidth / 10; // 10 segments for 5 players (very close together)
 
     for (let i = 0; i < count; i++) {
       const row = Math.floor((existingTeamPlayers + i) / playersPerRow);
       const col = (existingTeamPlayers + i) % playersPerRow;
 
       const playerId = `team${team}-${this.state.players.length}`;
-      const x = fieldLeft + horizontalSpacing * (col + 1.5); // Start from middle segments
+      const x = fieldLeft + horizontalSpacing * (col + 2.5); // Start from middle segments
       const y = team === 1
         ? attackBaseY + (row * rowSpacing)  // Moving down for attack team
         : defenseBaseY - (row * rowSpacing); // Moving up for defense team
@@ -168,7 +169,7 @@ export class GameEngine {
   }
 
   private checkBallClick(x: number, y: number): boolean {
-    const ballRadius = 20;
+    const ballRadius = this.BALL_RADIUS;
     const possessingPlayer = this.state.players.find(p => p.id === this.state.ball.possessionPlayerId);
     if (possessingPlayer) {
       const offset = 25;
@@ -465,18 +466,20 @@ export class GameEngine {
       ballY = possessingPlayer.position.y - offset;
     }
 
+    // Draw ball with black outline
     this.ctx.beginPath();
-    this.ctx.arc(ballX, ballY, 20, 0, Math.PI * 2);
+    this.ctx.arc(ballX, ballY, this.BALL_RADIUS, 0, Math.PI * 2);
     this.ctx.fillStyle = 'yellow';
     this.ctx.fill();
+    this.ctx.strokeStyle = 'black';
+    this.ctx.lineWidth = 2;
+    this.ctx.stroke();
 
     if (this.state.isBallSelected) {
+      this.ctx.beginPath();
+      this.ctx.arc(ballX, ballY, this.BALL_RADIUS + 2, 0, Math.PI * 2);
       this.ctx.strokeStyle = 'white';
-      this.ctx.lineWidth = 3;
-      this.ctx.stroke();
-    } else {
-      this.ctx.strokeStyle = '#cccccc';
-      this.ctx.lineWidth = 1;
+      this.ctx.lineWidth = 2;
       this.ctx.stroke();
     }
   }
@@ -532,8 +535,8 @@ export class GameEngine {
       const remainingPlayers = playerCount - 6;
       const subsPerRow = 2;
       const rowCount = Math.ceil(remainingPlayers / subsPerRow);
-      // Position subs clearly outside touchlines (100 pixels from sideline)
-      const sidelineX = team === 1 ? fieldLeft - 100 : fieldRight + 100;
+      // Position subs closer to touchlines (30 pixels from sideline)
+      const sidelineX = team === 1 ? fieldLeft - 30 : fieldRight + 30;
 
       for (let i = 0; i < remainingPlayers; i++) {
         const row = Math.floor(i / subsPerRow);
