@@ -11,6 +11,16 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import type { Folder } from "@shared/schema";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel
+} from "@/components/ui/alert-dialog";
 
 interface ControlsProps {
   gameEngine: GameEngine;
@@ -19,6 +29,7 @@ interface ControlsProps {
 export function Controls({ gameEngine }: ControlsProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showNoPlayersWarning, setShowNoPlayersWarning] = useState(false);
   const [playName, setPlayName] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
   const { toast } = useToast();
@@ -47,6 +58,18 @@ export function Controls({ gameEngine }: ControlsProps) {
     });
   };
 
+  const startRecording = () => {
+    const newRecordingState = gameEngine.toggleRecording();
+    setIsRecording(newRecordingState);
+
+    if (newRecordingState) {
+      toast({
+        title: "Recording started",
+        description: "Position players and take snapshots"
+      });
+    }
+  };
+
   const handleRecordingToggle = () => {
     if (!gameEngine) {
       toast({
@@ -57,25 +80,11 @@ export function Controls({ gameEngine }: ControlsProps) {
       return;
     }
 
-    // Check if there are any players on the field before starting recording
-    if (!isRecording && Object.keys(gameEngine.getPlayers()).length === 0) {
-      toast({
-        title: "Warning",
-        description: "Please add at least one player to the field before starting recording",
-        variant: "destructive"
-      });
-      return;
-    }
+    // If we're stopping recording
+    if (isRecording) {
+      const newRecordingState = gameEngine.toggleRecording();
+      setIsRecording(newRecordingState);
 
-    const newRecordingState = gameEngine.toggleRecording();
-    setIsRecording(newRecordingState);
-
-    if (newRecordingState) {
-      toast({
-        title: "Recording started",
-        description: "Position players and take snapshots"
-      });
-    } else {
       if (gameEngine.getRecordedKeyFrames().length > 0) {
         setShowSaveDialog(true);
       } else {
@@ -87,7 +96,17 @@ export function Controls({ gameEngine }: ControlsProps) {
         setIsRecording(true);
         gameEngine.toggleRecording(); // Resume recording
       }
+      return;
     }
+
+    // If we're starting recording, check for players
+    if (!isRecording && Object.keys(gameEngine.getPlayers()).length === 0) {
+      setShowNoPlayersWarning(true);
+      return;
+    }
+
+    // Start recording if we have players
+    startRecording();
   };
 
   const handleSavePlay = async () => {
@@ -150,7 +169,7 @@ export function Controls({ gameEngine }: ControlsProps) {
   return (
     <>
       <div className="flex gap-4 items-center bg-background rounded-lg p-2 shadow-lg">
-        <Button 
+        <Button
           variant={isRecording ? "destructive" : "default"}
           size="lg"
           onClick={handleRecordingToggle}
@@ -180,6 +199,34 @@ export function Controls({ gameEngine }: ControlsProps) {
         )}
       </div>
 
+      {/* No Players Warning Dialog */}
+      <AlertDialog
+        open={showNoPlayersWarning}
+        onOpenChange={setShowNoPlayersWarning}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No Players on Field</AlertDialogTitle>
+            <AlertDialogDescription>
+              There must be at least one player on the field before starting recording.
+              Would you like to continue anyway?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setShowNoPlayersWarning(false);
+                  startRecording();
+                }}
+              >
+                Continue Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Save Play Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent>
           <DialogHeader>
@@ -223,7 +270,7 @@ export function Controls({ gameEngine }: ControlsProps) {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleSavePlay}
               disabled={!selectedFolderId || !playName.trim()}
             >
