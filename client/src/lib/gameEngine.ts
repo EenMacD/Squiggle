@@ -146,16 +146,16 @@ export class GameEngine {
 
       // Only check for button click if there are players for this team
       if (this.state.players.filter(p => p.team === team).length > 0) {
-          // Default positions button click
-          if (x >= defaultBtnX - 60 && x <= defaultBtnX + 60 && y >= buttonY - 15 && y <= buttonY + 15) {
-            this.setDefaultPositions(team);
-            return;
-          }
-          // Bin button click
-          if (x >= binBtnX - 15 && x <= binBtnX + 15 && y >= buttonY - 15 && y <= buttonY + 15) {
-            this.removePlayersFromTeam(team, 0);
-            return;
-          }
+        // Default positions button click
+        if (x >= defaultBtnX - 60 && x <= defaultBtnX + 60 && y >= buttonY - 15 && y <= buttonY + 15) {
+          this.setDefaultPositions(team);
+          return;
+        }
+        // Bin button click
+        if (x >= binBtnX - 15 && x <= binBtnX + 15 && y >= buttonY - 15 && y <= buttonY + 15) {
+          this.removePlayersFromTeam(team, 0);
+          return;
+        }
       }
     });
 
@@ -553,49 +553,65 @@ export class GameEngine {
   }
 
   private setDefaultPositions(team: 1 | 2) {
-    // Field dimensions (accounting for margins)
     const fieldLeft = 50;
     const fieldRight = this.canvas.width - 50;
     const fieldTop = 50;
     const fieldMiddle = this.canvas.height / 2;
-    const defenseLineY = fieldMiddle - (fieldMiddle - fieldTop) / 2;
-    const spacing = (fieldRight - fieldLeft) / 7; // Divide field into 7 sections for 6 players
+
+    // Get existing players for this team
+    const teamPlayers = this.state.players.filter(p => p.team === team);
+    const playerCount = teamPlayers.length;
+
+    if (playerCount === 0) return;
 
     // Remove existing players of the specified team
     this.state.players = this.state.players.filter(p => p.team !== team);
 
-    if (team === 1) {
-      // Add red team (attack) along the middle line
-      for (let i = 0; i < 6; i++) {
-        const x = fieldLeft + spacing + (i * spacing);
-        const playerId = `team1-${i}`;
-        this.state.players.push({
-          id: playerId,
-          team: 1,
-          position: {
-            x,
-            y: fieldMiddle
-          }
-        });
+    // Calculate spacing for main line (up to 6 players)
+    const mainLineCount = Math.min(6, playerCount);
+    const spacing = (fieldRight - fieldLeft) / (mainLineCount + 1);
 
-        // Give the ball to the third player (index 2)
-        if (i === 2) {
-          this.state.ball.possessionPlayerId = playerId;
-          this.state.ball.position = {
-            x: x + 25,
-            y: fieldMiddle - 25
-          };
+    // Add players to main line (up to 6)
+    for (let i = 0; i < mainLineCount; i++) {
+      const x = fieldLeft + spacing * (i + 1);
+      const playerId = `team${team}-${i}`;
+
+      this.state.players.push({
+        id: playerId,
+        team,
+        position: {
+          x,
+          y: fieldMiddle
         }
+      });
+
+      // Give the ball to the middle player (index 2 or 3)
+      if (i === Math.floor(mainLineCount / 2)) {
+        this.state.ball.possessionPlayerId = playerId;
+        this.state.ball.position = {
+          x: x + 25,
+          y: fieldMiddle - 25
+        };
       }
-    } else {
-      // Add blue team (defense) between middle and top
-      for (let i = 0; i < 6; i++) {
+    }
+
+    // Place remaining players on sideline in rows of 2
+    if (playerCount > 6) {
+      const sidelineX = team === 1 ? 25 : this.canvas.width - 25;
+      const remainingPlayers = playerCount - 6;
+      const rows = Math.ceil(remainingPlayers / 2);
+
+      for (let i = 0; i < remainingPlayers; i++) {
+        const row = Math.floor(i / 2);
+        const col = i % 2;
+        const sidelineSpacing = 40; // Vertical spacing between players
+
         this.state.players.push({
-          id: `team2-${i}`,
-          team: 2,
+          id: `team${team}-${i + 6}`,
+          team,
           position: {
-            x: fieldLeft + spacing + (i * spacing),
-            y: defenseLineY
+            x: sidelineX + (col * 30) * (team === 1 ? 1 : -1),
+            y: fieldTop + 50 + (row * sidelineSpacing)
           }
         });
       }
