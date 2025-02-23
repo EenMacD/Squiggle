@@ -104,9 +104,11 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-2 border-b border-border">
-        <h2 className="font-semibold">{currentFolder?.name || "Plays"}</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex-1 text-center font-semibold">
+          {currentFolder?.name || "Plays"}
+        </div>
+        <Button variant="ghost" size="icon" onClick={onClose} className="absolute right-2">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -130,7 +132,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {folders?.filter(f => f.id !== folderId).map(folder => (
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       key={folder.id}
                       onClick={() => handleMovePlay(play, folder.id)}
                     >
@@ -138,7 +140,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
                       Move to {folder.name}
                     </DropdownMenuItem>
                   ))}
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-destructive"
                     onClick={() => setPlayToDelete(play)}
                   >
@@ -152,8 +154,8 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       </ScrollArea>
 
       {/* Delete Play Confirmation */}
-      <AlertDialog 
-        open={!!playToDelete} 
+      <AlertDialog
+        open={!!playToDelete}
         onOpenChange={() => setPlayToDelete(null)}
       >
         <AlertDialogContent>
@@ -165,7 +167,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeletePlay}
             >

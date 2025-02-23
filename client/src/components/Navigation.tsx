@@ -183,7 +183,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
           </SheetTrigger>
           <SheetContent side="left" className="w-64">
             <SheetHeader>
-              <SheetTitle>Playlists</SheetTitle>
+              <SheetTitle>Playlist</SheetTitle>
             </SheetHeader>
             <div className="mt-4 space-y-4">
               <Button
@@ -242,7 +242,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
             </div>
           </SheetContent>
         </Sheet>
-        <h1 className="text-lg font-semibold">Rugby Training Simulator</h1>
+        <h1 className="text-lg font-semibold">Squiggle</h1>
       </div>
 
       {/* Create Folder Dialog */}
@@ -274,7 +274,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreateFolder}
               disabled={createFolderMutation.isPending}
             >
@@ -313,7 +313,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleRenameFolder}
               disabled={renameFolderMutation.isPending}
             >
@@ -324,21 +324,21 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
       </Dialog>
 
       {/* Delete Folder Confirmation */}
-      <AlertDialog 
-        open={!!folderToDelete} 
+      <AlertDialog
+        open={!!folderToDelete}
         onOpenChange={() => setFolderToDelete(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{folderToDelete?.name}"? 
+              Are you sure you want to delete "{folderToDelete?.name}"?
               Plays inside this playlist will be moved to unorganized plays.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeleteFolder}
             >
