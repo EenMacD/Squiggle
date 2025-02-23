@@ -9,6 +9,12 @@ export interface Player {
   position: Position;
 }
 
+export interface TokenCounter {
+  team: 1 | 2;
+  count: number;
+  isEditing: boolean;
+}
+
 export interface BallState {
   position: Position;
   possessionPlayerId: string | null;
@@ -25,7 +31,8 @@ export interface GameState {
   }>;
   ball: BallState;
   isDraggingBall: boolean;
-  isBallSelected: boolean; // Add new state property
+  isBallSelected: boolean;
+  tokenCounters: TokenCounter[];
 }
 
 export class GameEngine {
@@ -38,6 +45,10 @@ export class GameEngine {
   private animationFrameId: number | null = null;
   private playbackSpeed: number = 1;
   private lastFrameTime: number = 0;
+  private readonly MAX_TOKENS = 20;
+  private readonly TOKENS_PER_ROW = 3;
+  private readonly TOKEN_SPACING = 40;
+  private readonly TOKEN_RADIUS = 15;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -49,55 +60,100 @@ export class GameEngine {
         x: canvas.width * 0.25,
         y: canvas.height / 2
       },
-      possessionPlayerId: 'team1-2'
+      possessionPlayerId: null
     };
 
     this.state = {
-      players: this.initializePlayers(),
+      players: [],
       selectedPlayer: null,
       isRecording: false,
       keyFrames: [],
       ball: initialBallState,
       isDraggingBall: false,
-      isBallSelected: false // Initialize new state
+      isBallSelected: false,
+      tokenCounters: [
+        { team: 1, count: 0, isEditing: false },
+        { team: 2, count: 0, isEditing: false }
+      ]
     };
 
     this.render();
   }
 
-  private initializePlayers(): Player[] {
-    const players: Player[] = [];
-    const spacing = this.canvas.width / 7;
+  public toggleTokenCounter(team: 1 | 2) {
+    const counter = this.state.tokenCounters.find(c => c.team === team);
+    if (counter) {
+      counter.isEditing = !counter.isEditing;
+      this.render();
+    }
+  }
 
-    // Team 1 (Red, Bottom side)
-    for (let i = 0; i < 6; i++) {
-      players.push({
-        id: `team1-${i}`,
-        team: 1,
-        position: {
-          x: spacing + (i * spacing),
-          y: this.canvas.height * 0.75
-        }
+  public updateTokenCount(team: 1 | 2, increment: boolean) {
+    const counter = this.state.tokenCounters.find(c => c.team === team);
+    if (counter) {
+      const newCount = increment ? counter.count + 1 : counter.count - 1;
+      if (newCount >= 0 && newCount <= this.MAX_TOKENS) {
+        counter.count = newCount;
+        this.render();
+      }
+    }
+  }
+
+  public spawnTokens(team: 1 | 2) {
+    const counter = this.state.tokenCounters.find(c => c.team === team);
+    if (!counter || counter.count === 0) return;
+
+    const existingTeamPlayers = this.state.players.filter(p => p.team === team).length;
+    const startX = team === 1 ? 100 : this.canvas.width - 100;
+    const startY = this.canvas.height - 100;
+
+    for (let i = 0; i < counter.count; i++) {
+      const totalPlayers = existingTeamPlayers + i;
+      const row = Math.floor(totalPlayers / this.TOKENS_PER_ROW);
+      const col = totalPlayers % this.TOKENS_PER_ROW;
+
+      const x = startX + (col * this.TOKEN_SPACING) * (team === 1 ? 1 : -1);
+      const y = startY - (row * this.TOKEN_SPACING);
+
+      this.state.players.push({
+        id: `team${team}-${this.state.players.length}`,
+        team,
+        position: { x, y }
       });
     }
 
-    // Team 2 (Blue, Top side)
-    for (let i = 0; i < 6; i++) {
-      players.push({
-        id: `team2-${i}`,
-        team: 2,
-        position: {
-          x: spacing + (i * spacing),
-          y: this.canvas.height * 0.25
-        }
-      });
-    }
-
-    return players;
+    counter.count = 0;
+    counter.isEditing = false;
+    this.render();
   }
 
   public startDragging(x: number, y: number) {
-    // Check if we're clicking on the ball first
+    // Check token counters first
+    const counterY = this.canvas.height - 50;
+    this.state.tokenCounters.forEach(counter => {
+      const counterX = counter.team === 1 ? 50 : this.canvas.width - 50;
+      const dx = x - counterX;
+      const dy = y - counterY;
+      if (Math.sqrt(dx * dx + dy * dy) < this.TOKEN_RADIUS) {
+        this.toggleTokenCounter(counter.team);
+        return;
+      }
+    });
+
+    // Check if we're clicking on the ball
+    if (this.checkBallClick(x, y)) return;
+
+    // If not clicking on ball or counters, try to select a player
+    const clickedPlayer = this.findNearestPlayer(x, y);
+    if (clickedPlayer) {
+      this.state.selectedPlayer = clickedPlayer.id;
+      this.state.isBallSelected = false;
+      this.isDragging = true;
+      this.render();
+    }
+  }
+
+  private checkBallClick(x: number, y: number): boolean {
     const ballRadius = 20;
     const possessingPlayer = this.state.players.find(p => p.id === this.state.ball.possessionPlayerId);
     if (possessingPlayer) {
@@ -111,20 +167,12 @@ export class GameEngine {
       if (distanceToBall < ballRadius) {
         this.state.isBallSelected = true;
         this.state.isDraggingBall = true;
-        this.state.selectedPlayer = null; // Deselect player when ball is selected
+        this.state.selectedPlayer = null;
         this.render();
-        return;
+        return true;
       }
     }
-
-    // If not clicking on ball, try to select a player
-    const clickedPlayer = this.findNearestPlayer(x, y);
-    if (clickedPlayer) {
-      this.state.selectedPlayer = clickedPlayer.id;
-      this.state.isBallSelected = false; // Deselect ball when player is selected
-      this.isDragging = true;
-      this.render();
-    }
+    return false;
   }
 
   public updateDragPosition(x: number, y: number) {
@@ -257,6 +305,7 @@ export class GameEngine {
   }
 
 
+
   private recordKeyFrame() {
     const positions: Record<string, Position> = {};
     this.state.players.forEach(player => {
@@ -369,10 +418,46 @@ export class GameEngine {
     this.ctx.lineTo(this.canvas.width - 50, this.canvas.height / 2);
     this.ctx.stroke();
 
+    // Draw token counters at the bottom
+    this.state.tokenCounters.forEach(counter => {
+      const x = counter.team === 1 ? 50 : this.canvas.width - 50;
+      const y = this.canvas.height - 50;
+
+      // Draw token
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, this.TOKEN_RADIUS, 0, Math.PI * 2);
+      this.ctx.fillStyle = counter.team === 1 ? 'red' : 'blue';
+      this.ctx.fill();
+
+      if (counter.isEditing) {
+        // Draw count
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(counter.count.toString(), x, y + 40);
+
+        // Draw +/- buttons
+        this.ctx.fillStyle = 'green';
+        this.ctx.fillText('+', x - 20, y);
+        this.ctx.fillStyle = 'red';
+        this.ctx.fillText('-', x + 20, y);
+      } else {
+        // Draw + symbol
+        this.ctx.strokeStyle = 'white';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - 5, y);
+        this.ctx.lineTo(x + 5, y);
+        this.ctx.moveTo(x, y - 5);
+        this.ctx.lineTo(x, y + 5);
+        this.ctx.stroke();
+      }
+    });
+
     // Draw players
     this.state.players.forEach(player => {
       this.ctx.beginPath();
-      this.ctx.arc(player.position.x, player.position.y, 15, 0, Math.PI * 2);
+      this.ctx.arc(player.position.x, player.position.y, this.TOKEN_RADIUS, 0, Math.PI * 2);
       this.ctx.fillStyle = player.team === 1 ? 'red' : 'blue';
       this.ctx.fill();
 
@@ -382,7 +467,6 @@ export class GameEngine {
         this.ctx.stroke();
       }
 
-      // Highlight player with ball possession
       if (player.id === this.state.ball.possessionPlayerId) {
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 2;
@@ -391,13 +475,16 @@ export class GameEngine {
     });
 
     // Draw ball
+    this.drawBall();
+  }
+
+  private drawBall() {
     const possessingPlayer = this.state.players.find(p => p.id === this.state.ball.possessionPlayerId);
     let ballX = this.state.ball.position.x;
     let ballY = this.state.ball.position.y;
 
     if (possessingPlayer) {
-      // Offset the ball slightly from the player
-      const offset = 25; // Distance from player center
+      const offset = 25;
       ballX = possessingPlayer.position.x + offset;
       ballY = possessingPlayer.position.y - offset;
     }
@@ -407,7 +494,6 @@ export class GameEngine {
     this.ctx.fillStyle = 'yellow';
     this.ctx.fill();
 
-    // Add white outline when ball is selected
     if (this.state.isBallSelected) {
       this.ctx.strokeStyle = 'white';
       this.ctx.lineWidth = 3;
@@ -418,6 +504,7 @@ export class GameEngine {
       this.ctx.stroke();
     }
   }
+
   public isRecording(): boolean {
     return this.state.isRecording;
   }

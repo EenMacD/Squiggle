@@ -12,8 +12,7 @@ export function Canvas() {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
       const aspectRatio = 4/3;
-      // Increase canvas size by 50% to zoom out
-      canvas.width = 1200; // Previous was 800
+      canvas.width = 1200;
       canvas.height = canvas.width / aspectRatio;
 
       const engine = new GameEngine(canvas);
@@ -26,12 +25,18 @@ export function Canvas() {
       if (!gameEngine) return;
 
       if (e.code === 'Space' && gameEngine.isRecording()) {
-        e.preventDefault(); // Prevent page scroll
+        e.preventDefault();
         gameEngine.takeSnapshot();
         toast({
           title: "Snapshot taken",
           description: "Player positions have been recorded"
         });
+      }
+
+      if (e.code === 'Enter') {
+        // Spawn tokens for both teams when Enter is pressed
+        gameEngine.spawnTokens(1);
+        gameEngine.spawnTokens(2);
       }
     };
 
