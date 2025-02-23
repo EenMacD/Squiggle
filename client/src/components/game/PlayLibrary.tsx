@@ -6,6 +6,8 @@ import type { Play, Folder as FolderType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +45,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
   const { toast } = useToast();
   const [playToDelete, setPlayToDelete] = useState<Play | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
 
   // Delete play mutation
   const deletePlayMutation = useMutation({
@@ -102,6 +105,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
 
   const handleExportPlay = async (play: Play) => {
     setIsExporting(true);
+    setExportProgress(0);
     try {
       // Create a temporary canvas for rendering
       const canvas = document.createElement('canvas');
@@ -116,24 +120,55 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       // Create a MediaRecorder to record the canvas
       const stream = canvas.captureStream(60); // 60fps
       const recorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9'
+        mimeType: 'video/webm;codecs=vp8'
       });
 
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => chunks.push(e.data);
 
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
+      // Initialize FFmpeg
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`/node_modules/@ffmpeg/core/dist/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`/node_modules/@ffmpeg/core/dist/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+
+      recorder.onstop = async () => {
+        setExportProgress(50); // Update progress after recording
+
+        const webmBlob = new Blob(chunks, { type: 'video/webm' });
+        const webmBuffer = await webmBlob.arrayBuffer();
+
+        // Write the WebM file to FFmpeg's virtual filesystem
+        await ffmpeg.writeFile('input.webm', new Uint8Array(webmBuffer));
+
+        // Convert WebM to MP4
+        await ffmpeg.exec([
+          '-i', 'input.webm',
+          '-c:v', 'libx264',
+          '-preset', 'fast',
+          '-crf', '22',
+          '-c:a', 'aac',
+          'output.mp4'
+        ]);
+
+        // Read the converted file
+        const data = await ffmpeg.readFile('output.mp4');
+        const mp4Blob = new Blob([data], { type: 'video/mp4' });
+
+        // Download the MP4 file
+        const url = URL.createObjectURL(mp4Blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${play.name.replace(/\s+/g, '_')}.webm`;
+        a.download = `${play.name.replace(/\s+/g, '_')}.mp4`;
         a.click();
         URL.revokeObjectURL(url);
+
         setIsExporting(false);
+        setExportProgress(100);
         toast({
           title: "Export complete",
-          description: "Your play animation has been downloaded.",
+          description: "Your play animation has been downloaded as MP4.",
         });
       };
 
@@ -154,6 +189,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
     } catch (error) {
       console.error('Export error:', error);
       setIsExporting(false);
+      setExportProgress(0);
       toast({
         title: "Export failed",
         description: "Failed to export the play animation. Please try again.",
@@ -200,7 +236,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
                     disabled={isExporting}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    {isExporting ? "Exporting..." : "Download Video"}
+                    {isExporting ? `Exporting (${exportProgress}%)...` : "Download MP4"}
                   </DropdownMenuItem>
                   {folders?.filter(f => f.id !== folderId).map(folder => (
                     <DropdownMenuItem
