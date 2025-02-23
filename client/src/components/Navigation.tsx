@@ -192,7 +192,7 @@ export function Navigation({ selectedFolderId, onFolderSelect }: NavigationProps
                 onClick={() => setNewFolderDialog(true)}
               >
                 <FolderPlus className="h-4 w-4 mr-2" />
-                Create New Folder
+                Create new folder
               </Button>
 
               <div className="space-y-1">
