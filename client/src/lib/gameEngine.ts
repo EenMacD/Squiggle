@@ -114,7 +114,7 @@ export class GameEngine {
         id: playerId,
         team,
         position: { x, y },
-        number: this.state.players.length + 1  // Default sequential numbering
+        number: this.state.players.filter(p => p.team === team).length + 1  // Start numbering from 1 for each team
       });
 
       // Give ball to center attacker if it's the first red team player
