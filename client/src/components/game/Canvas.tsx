@@ -212,6 +212,7 @@ export function Canvas() {
   return (
     <div className="h-full flex flex-col gap-2 bg-black" ref={containerRef}>
       <div className="relative flex-1 flex items-center justify-center">
+        <div className="text-2xl font-bold mb-4">Touch: {gameEngine?.state.touchCount || 0}</div>
         <canvas
           ref={canvasRef}
           className="border border-border rounded-lg"
@@ -220,6 +221,12 @@ export function Canvas() {
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleMouseLeave}
         />
+        <Button 
+          className="mt-4" 
+          onClick={() => gameEngine?.incrementTouch()}
+        >
+          Add touch
+        </Button>
       </div>
 
       {/* Team Management Buttons Row */}
