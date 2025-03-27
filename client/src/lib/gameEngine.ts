@@ -27,6 +27,7 @@ export interface GameState {
   ball: BallState;
   isDraggingBall: boolean;
   isBallSelected: boolean;
+  touchCount: number; // Added touchCount property
 }
 
 export class GameEngine {
@@ -62,7 +63,8 @@ export class GameEngine {
       keyFrames: [],
       ball: initialBallState,
       isDraggingBall: false,
-      isBallSelected: false
+      isBallSelected: false,
+      touchCount: 0 // Initialize touchCount
     };
 
     this.render();
@@ -333,7 +335,8 @@ export class GameEngine {
     this.state.keyFrames.push({
       timestamp: Date.now(),
       positions,
-      ball: { ...this.state.ball }
+      ball: { ...this.state.ball },
+      touchCount: this.state.touchCount
     });
   }
 
@@ -493,6 +496,12 @@ export class GameEngine {
     });
 
     this.drawBall();
+
+    //Add touch count display (replace with actual UI element placement)
+    this.ctx.font = '16px Arial';
+    this.ctx.fillStyle = 'black';
+    this.ctx.fillText(`Touch: ${this.state.touchCount}`, 10, 20);
+
   }
 
   private drawBall() {
@@ -659,5 +668,17 @@ export class GameEngine {
 
   public isPlaybackActive(): boolean {
     return this.animationFrameId !== null && this.currentKeyFrameIndex < this.state.keyFrames.length;
+  }
+
+  public getState(): GameState {
+    return this.state;
+  }
+
+  public incrementTouch(): void {
+    this.state.touchCount++;
+    this.render();
+    if (this.state.isRecording) {
+      this.recordKeyFrame();
+    }
   }
 }
