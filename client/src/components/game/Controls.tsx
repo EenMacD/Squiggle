@@ -170,127 +170,130 @@ export function Controls({ gameEngine }: ControlsProps) {
   };
 
   return (
-    <div className="flex flex-col gap-2 items-center">
-      {isRecording && (
-        <>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => gameEngine?.incrementTouch()}
-            className="w-full"
-          >
-            Add Touch
-          </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={handleSnapshot}
-          className="w-full"
-        >
-          <Camera className="h-4 w-4 mr-2" />
-          Snapshot ({snapshotCount})
-        </Button>
-      )}
-
-      <Button
-        variant={isRecording ? "outline" : "default"}
-        size="lg"
-        onClick={handleRecordingToggle}
-        className={`w-full ${isRecording ? "bg-white text-black hover:bg-white/90" : ""}`}
-      >
-        {isRecording ? (
+    <>
+      <div className="flex flex-col gap-2 items-center">
+        {isRecording && (
           <>
-            <StopCircle className="h-4 w-4 mr-2" />
-            Stop Recording
-          </>
-        ) : (
-          <>
-            <PlayCircle className="h-4 w-4 mr-2" />
-            Start Recording
-          </>
-        )}
-      </Button>
-
-      {/* No Players Warning Dialog */}
-      <AlertDialog
-        open={showNoPlayersWarning}
-        onOpenChange={setShowNoPlayersWarning}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>No Players on Field</AlertDialogTitle>
-            <AlertDialogDescription>
-              There must be at least one player on the field before starting recording.
-              Would you like to continue anyway?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowNoPlayersWarning(false);
-                startRecording();
-              }}
-            >
-              Continue Anyway
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Save Play Dialog */}
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save Recorded Play</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="playName">Play Name</Label>
-              <Input
-                id="playName"
-                value={playName}
-                onChange={(e) => setPlayName(e.target.value)}
-                placeholder="Enter a name for this play"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="folder">Save to Folder (Required)</Label>
-              <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a folder" />
-                </SelectTrigger>
-                <SelectContent>
-                  {folders?.map(folder => (
-                    <SelectItem key={folder.id} value={folder.id.toString()}>
-                      {folder.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setShowSaveDialog(false);
-                setPlayName("");
-                setSelectedFolderId("");
-              }}
+              size="lg"
+              onClick={() => gameEngine?.incrementTouch()}
+              className="w-full"
             >
-              Cancel
+              Add Touch
             </Button>
             <Button
-              onClick={handleSavePlay}
-              disabled={!selectedFolderId || !playName.trim()}
+              variant="outline"
+              size="lg"
+              onClick={handleSnapshot}
+              className="w-full"
             >
-              Save Play
+              <Camera className="h-4 w-4 mr-2" />
+              Snapshot ({snapshotCount})
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </>
+        )}
+
+        <Button
+          variant={isRecording ? "outline" : "default"}
+          size="lg"
+          onClick={handleRecordingToggle}
+          className={`w-full ${isRecording ? "bg-white text-black hover:bg-white/90" : ""}`}
+        >
+          {isRecording ? (
+            <>
+              <StopCircle className="h-4 w-4 mr-2" />
+              Stop Recording
+            </>
+          ) : (
+            <>
+              <PlayCircle className="h-4 w-4 mr-2" />
+              Start Recording
+            </>
+          )}
+        </Button>
+
+        {/* No Players Warning Dialog */}
+        <AlertDialog
+          open={showNoPlayersWarning}
+          onOpenChange={setShowNoPlayersWarning}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>No Players on Field</AlertDialogTitle>
+              <AlertDialogDescription>
+                There must be at least one player on the field before starting recording.
+                Would you like to continue anyway?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setShowNoPlayersWarning(false);
+                  startRecording();
+                }}
+              >
+                Continue Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Save Play Dialog */}
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Save Recorded Play</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="playName">Play Name</Label>
+                <Input
+                  id="playName"
+                  value={playName}
+                  onChange={(e) => setPlayName(e.target.value)}
+                  placeholder="Enter a name for this play"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="folder">Save to Folder (Required)</Label>
+                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {folders?.map(folder => (
+                      <SelectItem key={folder.id} value={folder.id.toString()}>
+                        {folder.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSaveDialog(false);
+                  setPlayName("");
+                  setSelectedFolderId("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSavePlay}
+                disabled={!selectedFolderId || !playName.trim()}
+              >
+                Save Play
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }
