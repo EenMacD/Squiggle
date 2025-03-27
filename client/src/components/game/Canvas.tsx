@@ -211,7 +211,8 @@ export function Canvas() {
 
   return (
     <div className="h-full flex flex-col gap-2 bg-black" ref={containerRef}>
-      <div className="relative flex-1 flex items-center justify-center">
+      <div className="relative flex-1 flex flex-col items-center justify-center">
+        <div className="text-white text-xl mb-4">Touch: {gameEngine?.getState().touchCount || 0}</div>
         <canvas
           ref={canvasRef}
           className="border border-border rounded-lg"

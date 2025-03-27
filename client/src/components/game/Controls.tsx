@@ -172,6 +172,15 @@ export function Controls({ gameEngine }: ControlsProps) {
   return (
     <div className="flex flex-col gap-2 items-center">
       {isRecording && (
+        <>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => gameEngine?.incrementTouch()}
+            className="w-full"
+          >
+            Add Touch
+          </Button>
         <Button
           variant="outline"
           size="lg"
