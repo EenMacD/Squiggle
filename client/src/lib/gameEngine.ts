@@ -1,6 +1,7 @@
 export interface Position {
   x: number;
   y: number;
+  pathNumber?: number; // Added pathNumber
 }
 
 export interface Player {
@@ -46,6 +47,7 @@ export class GameEngine {
   private readonly TOKEN_RADIUS = 15;
   private readonly SIDELINE_WIDTH = 50;
   private readonly BALL_RADIUS = 10; // Reduced size for better centering
+  private pathCounter: number = 0; // Added path counter
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -323,6 +325,7 @@ export class GameEngine {
       this.state.keyFrames = [];
       this.state.movementPaths = {};
       this.state.startPositions = {};
+      this.pathCounter = 0; // Reset path counter when starting recording
     }
     return this.state.isRecording;
   }
@@ -343,7 +346,8 @@ export class GameEngine {
       if (this.state.movementPaths[player.id]?.length > 0) {
         // Use the end position from the path
         const path = this.state.movementPaths[player.id];
-        player.position = path[path.length - 1];
+        const lastPosition = path[path.length - 1];
+        player.position = {x: lastPosition.x, y: lastPosition.y}; // Update player position
         delete this.state.movementPaths[player.id];
         delete this.state.startPositions[player.id];
       }
@@ -473,8 +477,16 @@ export class GameEngine {
   }
 
   private drawPaths() {
-    // Paths disabled
-    return;
+    Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
+      this.ctx.beginPath();
+      this.ctx.strokeStyle = 'green';
+      this.ctx.lineWidth = 2;
+      this.ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i++) {
+        this.ctx.lineTo(path[i].x, path[i].y);
+      }
+      this.ctx.stroke();
+    });
   }
 
 
@@ -711,8 +723,9 @@ export class GameEngine {
         if (!this.state.movementPaths[player.id]) {
           this.state.movementPaths[player.id] = [];
           this.state.startPositions[player.id] = {...player.position};
+          this.pathCounter++; // Increment path counter when a new path starts.
         }
-        this.state.movementPaths[player.id].push({ x, y });
+        this.state.movementPaths[player.id].push({ x, y, pathNumber: this.pathCounter });
         player.position = this.state.startPositions[player.id];
         this.isDrawingPath = true;
       } else {
