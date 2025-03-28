@@ -15,6 +15,11 @@ export interface BallState {
   possessionPlayerId: string | null;
 }
 
+export interface PlayerPath {
+  startPos: Position;
+  endPos: Position;
+}
+
 export interface GameState {
   players: Player[];
   selectedPlayer: string | null;
@@ -28,6 +33,7 @@ export interface GameState {
   isDraggingBall: boolean;
   isBallSelected: boolean;
   touchCount: number; // Added touchCount property
+  playerPaths: Record<string, PlayerPath>;
 }
 
 export class GameEngine {
@@ -64,7 +70,8 @@ export class GameEngine {
       ball: initialBallState,
       isDraggingBall: false,
       isBallSelected: false,
-      touchCount: 0 // Initialize touchCount
+      touchCount: 0, // Initialize touchCount
+      playerPaths: {}
     };
 
     this.render();
@@ -177,6 +184,10 @@ export class GameEngine {
       this.state.selectedPlayer = clickedPlayer.id;
       this.state.isBallSelected = false;
       this.isDragging = true;
+      this.state.playerPaths[clickedPlayer.id] = {
+        startPos: { ...clickedPlayer.position },
+        endPos: { ...clickedPlayer.position }
+      };
       this.render();
     }
   }
@@ -227,6 +238,7 @@ export class GameEngine {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         player.position = { x: constrainedX, y: constrainedY };
+        this.state.playerPaths[player.id].endPos = { x: constrainedX, y: constrainedY };
 
         // If player has ball possession, move ball with player
         if (this.state.ball.possessionPlayerId === player.id) {
@@ -275,7 +287,7 @@ export class GameEngine {
       this.state.isBallSelected = false;
     }
 
-    if (this.isDragging && this.state.isRecording) {
+    if (this.isDragging && this.state.isRecording && this.state.selectedPlayer) {
       this.recordKeyFrame();
     }
     this.isDragging = false;
@@ -305,6 +317,7 @@ export class GameEngine {
 
     if (this.state.isRecording) {
       this.state.keyFrames = [];
+      this.state.playerPaths = {};
     }
 
     return this.state.isRecording;
@@ -315,7 +328,7 @@ export class GameEngine {
 
     const positions: Record<string, Position> = {};
     this.state.players.forEach(player => {
-      positions[player.id] = { ...player.position };
+      positions[player.id] = this.state.playerPaths[player.id]?.endPos || {x:0, y:0}; // Use end position if path exists, otherwise default to {x:0, y:0}
     });
 
     this.state.keyFrames.push({
