@@ -219,24 +219,39 @@ export class GameEngine {
     const constrainedX = Math.max(fieldLeft + this.TOKEN_RADIUS, Math.min(fieldRight - this.TOKEN_RADIUS, x));
     const constrainedY = Math.max(fieldTop + this.TOKEN_RADIUS, Math.min(fieldBottom - this.TOKEN_RADIUS, y));
 
+    if (this.state.isDraggingBall) {
+      // Allow ball to be dragged freely
+      this.state.ball.position = { x: constrainedX, y: constrainedY };
+      // Release ball from player possession while dragging
+      this.state.ball.possessionPlayerId = null;
+      this.render();
+      return;
+    }
+
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         if (this.state.isRecording) {
-          // Store initial position if not already stored
-          if (!this.state.startPositions[player.id]) {
+          // Store the path
+          if (!this.state.movementPaths[player.id]) {
+            this.state.movementPaths[player.id] = [];
             this.state.startPositions[player.id] = {...player.position};
-            this.state.movementPaths[player.id] = [{ ...player.position }];
           }
-          // Update the path and player position in real-time
           this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
+          // player.position = this.state.startPositions[player.id]; // Keep original position for now
           this.isDrawingPath = true;
-          // Move player along with the path
-          player.position = { x: constrainedX, y: constrainedY };
         } else {
-          // When not recording, just update player position
           player.position = { x: constrainedX, y: constrainedY };
         }
+
+        // If player has ball possession, move ball with player
+        if (this.state.ball.possessionPlayerId === player.id) {
+          this.state.ball.position = {
+            x: player.position.x,
+            y: player.position.y
+          };
+        }
+
         this.render();
       }
     }
@@ -321,20 +336,7 @@ export class GameEngine {
   public takeSnapshot() {
     if (!this.state.isRecording) return;
 
-    // Move players to their path end positions
-    Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
-      if (path.length > 0) {
-        const player = this.state.players.find(p => p.id === playerId);
-        if (player) {
-          const endPosition = path[path.length - 1];
-          player.position = {...endPosition};
-        }
-      }
-    });
-
     this.recordKeyFrame();
-    
-    // Clear paths and start positions after recording
     this.state.movementPaths = {};
     this.state.startPositions = {};
     this.render();
@@ -477,6 +479,8 @@ export class GameEngine {
   }
 
   private drawPaths() {
+    if (!this.state.isRecording) return;
+
     Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
       if (path.length < 2) return;
 
@@ -485,7 +489,7 @@ export class GameEngine {
       path.forEach(point => {
         this.ctx.lineTo(point.x, point.y);
       });
-      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      this.ctx.strokeStyle = 'rgba(0, 0, 255, 0.3)';
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
     });
@@ -496,12 +500,12 @@ export class GameEngine {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Draw paths first so they appear under players
+    this.drawPaths();
+
     // Draw field background in white
     this.ctx.fillStyle = '#FFFFFF';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Draw paths after background but before players
-    this.drawPaths();
 
     // Sidelines in black
     this.ctx.strokeStyle = 'black';
