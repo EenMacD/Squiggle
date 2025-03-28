@@ -90,7 +90,6 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
 
     try {
       setIsExporting(true);
-      engineRef.current.setPlaybackSpeed(0.03);
       toast({
         title: "Starting video export",
         description: "Please wait while we generate your video..."
@@ -164,7 +163,6 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
       });
     } finally {
       setIsExporting(false);
-      engineRef.current?.setPlaybackSpeed(1);
       engineRef.current?.resetPlayback();
     }
   };
