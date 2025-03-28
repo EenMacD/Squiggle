@@ -335,6 +335,10 @@ export class GameEngine {
     if (this.state.isRecording) {
       this.state.keyFrames = [];
       this.state.playerPaths = {};
+    } else {
+      // Clear all paths when recording stops
+      this.state.playerPaths = {};
+      this.render();
     }
 
     return this.state.isRecording;
@@ -343,16 +347,16 @@ export class GameEngine {
   public takeSnapshot() {
     if (!this.state.isRecording) return;
 
-    // Move all players with paths to their end positions
-    this.state.players.forEach(player => {
-      if (this.state.playerPaths[player.id]?.endPos) {
-        player.position = { ...this.state.playerPaths[player.id].endPos };
-      }
-    });
-
+    // Move all players with paths to their end positions and create positions object
     const positions: Record<string, Position> = {};
     this.state.players.forEach(player => {
-      positions[player.id] = { ...player.position };
+      if (this.state.playerPaths[player.id]?.endPos) {
+        // Update both the recorded position and the player's current position
+        positions[player.id] = { ...this.state.playerPaths[player.id].endPos };
+        player.position = { ...this.state.playerPaths[player.id].endPos };
+      } else {
+        positions[player.id] = { ...player.position };
+      }
     });
 
     this.state.keyFrames.push({
@@ -498,19 +502,21 @@ export class GameEngine {
     this.ctx.lineTo(this.canvas.width - 50 - this.SIDELINE_WIDTH, this.canvas.height / 2);
     this.ctx.stroke();
 
-    // Draw recorded paths
-    Object.entries(this.state.playerPaths).forEach(([id, pathData]) => {
-      if (pathData.path && pathData.path.length > 1) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(pathData.path[0].x, pathData.path[0].y);
-        for (let i = 1; i < pathData.path.length; i++) {
-          this.ctx.lineTo(pathData.path[i].x, pathData.path[i].y);
+    // Draw recorded paths only when recording
+    if (this.state.isRecording) {
+      Object.entries(this.state.playerPaths).forEach(([id, pathData]) => {
+        if (pathData.path && pathData.path.length > 1) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(pathData.path[0].x, pathData.path[0].y);
+          for (let i = 1; i < pathData.path.length; i++) {
+            this.ctx.lineTo(pathData.path[i].x, pathData.path[i].y);
+          }
+          this.ctx.strokeStyle = 'black';
+          this.ctx.lineWidth = 2;
+          this.ctx.stroke();
         }
-        this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-      }
-    });
+      });
+    }
 
     // Draw current drag path
     if (this.isDragging && this.dragPath && this.dragPath.length > 1) {
