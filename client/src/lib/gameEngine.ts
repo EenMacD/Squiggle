@@ -484,24 +484,34 @@ export class GameEngine {
   }
 
   private drawPaths() {
+    if (!this.state.isRecording) return;
+    
     Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
-      if (path.length < 2) return;
+      if (!path || path.length < 2) return;
       
-      // Draw the path
+      // Draw the path line
       this.ctx.beginPath();
-      this.ctx.strokeStyle = 'black';
-      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = '#2196F3';
+      this.ctx.lineWidth = 3;
       this.ctx.moveTo(path[0].x, path[0].y);
-      path.forEach(point => {
-        this.ctx.lineTo(point.x, point.y);
-      });
+      
+      for (let i = 1; i < path.length; i++) {
+        this.ctx.lineTo(path[i].x, path[i].y);
+      }
+      
       this.ctx.stroke();
 
-      // Draw the path number
+      // Draw path number at the end
       const lastPoint = path[path.length - 1];
-      this.ctx.font = '16px Arial';
-      this.ctx.fillStyle = 'black';
-      this.ctx.fillText(lastPoint.pathNumber?.toString() || '', lastPoint.x + 10, lastPoint.y + 10);
+      this.ctx.font = 'bold 20px Arial';
+      this.ctx.fillStyle = '#000';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText(
+        (lastPoint.pathNumber || '').toString(),
+        lastPoint.x,
+        lastPoint.y - 20
+      );
     });
   }
 
