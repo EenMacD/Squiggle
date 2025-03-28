@@ -47,3 +47,16 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Dev Stack"
+author = 5873926
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd CSharpBackend && dotnet run"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
