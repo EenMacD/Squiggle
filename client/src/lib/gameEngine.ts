@@ -496,12 +496,12 @@ export class GameEngine {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw paths first so they appear under players
-    this.drawPaths();
-
     // Draw field background in white
     this.ctx.fillStyle = '#FFFFFF';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Draw paths after background but before players
+    this.drawPaths();
 
     // Sidelines in black
     this.ctx.strokeStyle = 'black';
