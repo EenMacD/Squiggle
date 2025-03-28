@@ -234,8 +234,15 @@ export class GameEngine {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         if (this.state.isRecording) {
-          // Just store final position
-          player.position = { x: constrainedX, y: constrainedY };
+          // Store the path
+          if (!this.state.movementPaths[player.id]) {
+            this.state.movementPaths[player.id] = [];
+            this.state.startPositions[player.id] = {...player.position};
+            this.pathCounter++; // Increment path counter for new paths
+          }
+          this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY, pathNumber: this.pathCounter });
+          player.position = this.state.startPositions[player.id]; // Keep original position
+          this.isDrawingPath = true;
         } else {
           player.position = { x: constrainedX, y: constrainedY };
         }
@@ -478,14 +485,23 @@ export class GameEngine {
 
   private drawPaths() {
     Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
+      if (path.length < 2) return;
+      
+      // Draw the path
       this.ctx.beginPath();
-      this.ctx.strokeStyle = 'green';
+      this.ctx.strokeStyle = 'black';
       this.ctx.lineWidth = 2;
       this.ctx.moveTo(path[0].x, path[0].y);
-      for (let i = 1; i < path.length; i++) {
-        this.ctx.lineTo(path[i].x, path[i].y);
-      }
+      path.forEach(point => {
+        this.ctx.lineTo(point.x, point.y);
+      });
       this.ctx.stroke();
+
+      // Draw the path number
+      const lastPoint = path[path.length - 1];
+      this.ctx.font = '16px Arial';
+      this.ctx.fillStyle = 'black';
+      this.ctx.fillText(lastPoint.pathNumber?.toString() || '', lastPoint.x + 10, lastPoint.y + 10);
     });
   }
 
