@@ -18,6 +18,7 @@ export interface BallState {
 export interface PlayerPath {
   startPos: Position;
   endPos: Position;
+  path: Position[];
 }
 
 export interface GameState {
@@ -174,6 +175,8 @@ export class GameEngine {
     this.render();
   }
 
+  private dragPath: Position[] = [];
+
   public startDragging(x: number, y: number) {
     // Check if we're clicking on the ball
     if (this.checkBallClick(x, y)) return;
@@ -184,9 +187,11 @@ export class GameEngine {
       this.state.selectedPlayer = clickedPlayer.id;
       this.state.isBallSelected = false;
       this.isDragging = true;
+      this.dragPath = [{ x, y }];
       this.state.playerPaths[clickedPlayer.id] = {
         startPos: { ...clickedPlayer.position },
-        endPos: { ...clickedPlayer.position }
+        endPos: { ...clickedPlayer.position },
+        path: this.dragPath
       };
       this.render();
     }
@@ -224,6 +229,10 @@ export class GameEngine {
     // Constrain coordinates within field boundaries
     const constrainedX = Math.max(fieldLeft + this.TOKEN_RADIUS, Math.min(fieldRight - this.TOKEN_RADIUS, x));
     const constrainedY = Math.max(fieldTop + this.TOKEN_RADIUS, Math.min(fieldBottom - this.TOKEN_RADIUS, y));
+
+    if (this.isDragging && this.dragPath) {
+      this.dragPath.push({ x: constrainedX, y: constrainedY });
+    }
 
     if (this.state.isDraggingBall) {
       // Allow ball to be dragged freely
@@ -287,10 +296,18 @@ export class GameEngine {
       this.state.isBallSelected = false;
     }
 
-    if (this.isDragging && this.state.isRecording && this.state.selectedPlayer) {
-      this.recordKeyFrame();
+    if (this.isDragging && this.state.selectedPlayer) {
+      const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
+      if (player) {
+        // Save the end position and path
+        this.state.playerPaths[player.id].endPos = { ...player.position };
+        this.state.playerPaths[player.id].path = [...this.dragPath];
+        // Reset player to start position
+        player.position = { ...this.state.playerPaths[player.id].startPos };
+      }
     }
     this.isDragging = false;
+    this.dragPath = [];
     this.render();
   }
 
@@ -326,9 +343,16 @@ export class GameEngine {
   public takeSnapshot() {
     if (!this.state.isRecording) return;
 
+    // Move all players with paths to their end positions
+    this.state.players.forEach(player => {
+      if (this.state.playerPaths[player.id]?.endPos) {
+        player.position = { ...this.state.playerPaths[player.id].endPos };
+      }
+    });
+
     const positions: Record<string, Position> = {};
     this.state.players.forEach(player => {
-      positions[player.id] = this.state.playerPaths[player.id]?.endPos || {x:0, y:0}; // Use end position if path exists, otherwise default to {x:0, y:0}
+      positions[player.id] = { ...player.position };
     });
 
     this.state.keyFrames.push({
@@ -473,6 +497,32 @@ export class GameEngine {
     this.ctx.moveTo(50 + this.SIDELINE_WIDTH, this.canvas.height / 2);
     this.ctx.lineTo(this.canvas.width - 50 - this.SIDELINE_WIDTH, this.canvas.height / 2);
     this.ctx.stroke();
+
+    // Draw recorded paths
+    Object.entries(this.state.playerPaths).forEach(([id, pathData]) => {
+      if (pathData.path && pathData.path.length > 1) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(pathData.path[0].x, pathData.path[0].y);
+        for (let i = 1; i < pathData.path.length; i++) {
+          this.ctx.lineTo(pathData.path[i].x, pathData.path[i].y);
+        }
+        this.ctx.strokeStyle = 'black';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+      }
+    });
+
+    // Draw current drag path
+    if (this.isDragging && this.dragPath && this.dragPath.length > 1) {
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.dragPath[0].x, this.dragPath[0].y);
+      for (let i = 1; i < this.dragPath.length; i++) {
+        this.ctx.lineTo(this.dragPath[i].x, this.dragPath[i].y);
+      }
+      this.ctx.strokeStyle = 'black';
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
+    }
 
     // Draw players
     this.state.players.forEach(player => {
