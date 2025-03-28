@@ -110,8 +110,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
       // Create a temporary canvas for rendering
       const canvas = document.createElement('canvas');
       const aspectRatio = 4/3;
-      // Reduce canvas size for faster processing
-      canvas.width = 640; // Even smaller for better performance
+      canvas.width = 800; // Match playback dimensions
       canvas.height = canvas.width / aspectRatio;
 
       // Initialize game engine with the temp canvas
