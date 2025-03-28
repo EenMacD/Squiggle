@@ -15,19 +15,31 @@ export interface BallState {
   possessionPlayerId: string | null;
 }
 
+export interface KeyFrame {
+  timestamp: number;
+  positions: Record<string, Position>;
+  ball: BallState;
+  touchCount: number;
+}
+
+export interface Path {
+  playerId: string;
+  points: Position[];
+  order: number;
+}
+
 export interface GameState {
   players: Player[];
   selectedPlayer: string | null;
   isRecording: boolean;
-  keyFrames: Array<{
-    timestamp: number;
-    positions: Record<string, Position>;
-    ball: BallState;
-  }>;
+  keyFrames: KeyFrame[];
   ball: BallState;
   isDraggingBall: boolean;
   isBallSelected: boolean;
-  touchCount: number; // Added touchCount property
+  touchCount: number;
+  isPathMode: boolean;
+  paths: Path[];
+  currentPathOrder: number;
 }
 
 export class GameEngine {
@@ -64,7 +76,10 @@ export class GameEngine {
       ball: initialBallState,
       isDraggingBall: false,
       isBallSelected: false,
-      touchCount: 0 // Initialize touchCount
+      touchCount: 0, // Initialize touchCount
+      isPathMode: false,
+      paths: [],
+      currentPathOrder: 0
     };
 
     this.render();
@@ -236,6 +251,10 @@ export class GameEngine {
           };
         }
 
+        if (this.state.isRecording && this.state.isPathMode) {
+          this.updatePath(player.id, { x: constrainedX, y: constrainedY });
+        }
+
         this.render();
       }
     }
@@ -275,8 +294,8 @@ export class GameEngine {
       this.state.isBallSelected = false;
     }
 
-    if (this.isDragging && this.state.isRecording) {
-      this.recordKeyFrame();
+    if (this.isDragging && this.state.isRecording && this.state.isPathMode) {
+      this.finishPath();
     }
     this.isDragging = false;
     this.render();
@@ -302,9 +321,12 @@ export class GameEngine {
 
   public toggleRecording(): boolean {
     this.state.isRecording = !this.state.isRecording;
+    this.state.isPathMode = this.state.isRecording; // Enable path mode when recording starts
 
     if (this.state.isRecording) {
       this.state.keyFrames = [];
+      this.state.paths = [];
+      this.state.currentPathOrder = 0;
     }
 
     return this.state.isRecording;
@@ -321,7 +343,8 @@ export class GameEngine {
     this.state.keyFrames.push({
       timestamp: Date.now(),
       positions,
-      ball: { ...this.state.ball }
+      ball: { ...this.state.ball },
+      touchCount: this.state.touchCount
     });
   }
 
@@ -505,6 +528,10 @@ export class GameEngine {
     this.ctx.fillText(`Touch: ${this.state.touchCount}`, 20, 30);
     this.ctx.restore();
 
+    // Draw paths if in path mode
+    if (this.state.isPathMode) {
+      this.drawPaths();
+    }
   }
 
   private drawBall() {
@@ -683,5 +710,56 @@ export class GameEngine {
     if (this.state.isRecording) {
       this.recordKeyFrame();
     }
+  }
+
+  public startPath(playerId: string, position: Position): void {
+    if (!this.state.isRecording || !this.state.isPathMode) return;
+
+    const newPath: Path = {
+      playerId,
+      points: [position],
+      order: ++this.state.currentPathOrder
+    };
+
+    this.state.paths.push(newPath);
+  }
+
+  public updatePath(playerId: string, position: Position): void {
+    if (!this.state.isRecording || !this.state.isPathMode) return;
+
+    const path = this.state.paths.find(p => p.playerId === playerId);
+    if (path) {
+      path.points.push(position);
+    } else {
+      // This shouldn't happen, but handle it gracefully
+      console.warn("Path not found for player:", playerId);
+    }
+  }
+
+  public finishPath(): void {
+    if (!this.state.isRecording || !this.state.isPathMode) return;
+  }
+
+  private drawPaths(): void {
+    this.state.paths.forEach(path => {
+      this.ctx.beginPath();
+      this.ctx.strokeStyle = `hsl(${path.order * 30}, 100%, 50%)`;
+      this.ctx.lineWidth = 2;
+      this.ctx.moveTo(path.points[0].x, path.points[0].y);
+
+      for (let i = 1; i < path.points.length; i++) {
+        this.ctx.lineTo(path.points[i].x, path.points[i].y);
+      }
+
+      this.ctx.stroke();
+    });
+  }
+
+
+  public togglePathMode(): void {
+    if (!this.state.isRecording) return;
+    this.state.isPathMode = !this.state.isPathMode;
+    if(!this.state.isPathMode) this.state.paths = [];
+    this.render();
   }
 }

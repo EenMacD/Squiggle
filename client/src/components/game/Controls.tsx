@@ -33,6 +33,7 @@ export function Controls({ gameEngine }: ControlsProps) {
   const [playName, setPlayName] = useState("");
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
   const [snapshotCount, setSnapshotCount] = useState(0);
+  const [isPathMode, setIsPathMode] = useState(false);
   const { toast } = useToast();
 
   const handleSnapshot = () => {
@@ -174,6 +175,21 @@ export function Controls({ gameEngine }: ControlsProps) {
       <div className="flex flex-col gap-2 items-center">
         {isRecording && (
           <>
+            <Button
+              variant={isPathMode ? "outline" : "default"}
+              size="lg"
+              onClick={() => {
+                const newPathMode = gameEngine?.togglePathMode();
+                setIsPathMode(!!newPathMode);
+                toast({
+                  title: newPathMode ? "Path Mode Enabled" : "Path Mode Disabled",
+                  description: newPathMode ? "Click and drag players to record paths" : "Normal movement mode restored"
+                });
+              }}
+              className="w-full"
+            >
+              {isPathMode ? "Disable Paths" : "Enable Paths"}
+            </Button>
             <Button
               variant="outline"
               size="lg"
