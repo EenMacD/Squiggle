@@ -347,23 +347,29 @@ export class GameEngine {
   public takeSnapshot() {
     if (!this.state.isRecording) return;
 
-    const positions: Record<string, Position> = {};
-    
-    // Update positions and record them
+    // First move all players to their final positions
     this.state.players.forEach(player => {
-      if (this.state.playerPaths[player.id]?.endPos) {
-        // Set both current position and record it
-        player.position = { ...this.state.playerPaths[player.id].endPos };
-        positions[player.id] = { ...this.state.playerPaths[player.id].endPos };
-      } else {
-        positions[player.id] = { ...player.position };
+      const path = this.state.playerPaths[player.id];
+      if (path?.endPos) {
+        // Move player to end position
+        player.position.x = path.endPos.x;
+        player.position.y = path.endPos.y;
       }
     });
 
-    // Clear paths after recording
+    // Then record positions
+    const positions: Record<string, Position> = {};
+    this.state.players.forEach(player => {
+      positions[player.id] = {
+        x: player.position.x,
+        y: player.position.y
+      };
+    });
+
+    // Clear paths
     this.state.playerPaths = {};
-    
-    // Force render update
+
+    // Ensure changes are visible
     this.render();
 
     this.state.keyFrames.push({
