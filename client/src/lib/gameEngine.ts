@@ -703,11 +703,13 @@ export class GameEngine {
       this.prepareStateForExport(frame);
     }
 
-    // Update positions while maintaining player properties
+    // Update positions while maintaining player properties and numbers
     Object.entries(frame.positions).forEach(([playerId, position]) => {
       const player = this.state.players.find(p => p.id === playerId);
       if (player) {
+        const [teamStr, numStr] = playerId.split('-');
         player.position = { ...position };
+        player.number = parseInt(numStr) + 1;  // Add 1 since numbers start from 1
       }
     });
 
