@@ -381,14 +381,14 @@ export class GameEngine {
     if (this.state.keyFrames.length > 0) {
       const firstFrame = this.state.keyFrames[0];
 
-      // Initialize players with proper team assignments and numbers
+      // Initialize players with proper team assignments and numbers starting from 1
       this.state.players = Object.entries(firstFrame.positions).map(([id, position]) => {
         const [teamStr, numStr] = id.split('-');
         return {
           id,
           team: parseInt(teamStr.replace('team', '')) as 1 | 2,
           position: { ...position },
-          number: parseInt(numStr)
+          number: parseInt(numStr) + 1
         };
       });
 
@@ -709,7 +709,7 @@ export class GameEngine {
       if (player) {
         const [teamStr, numStr] = playerId.split('-');
         player.position = { ...position };
-        player.number = parseInt(numStr) + 1;  // Add 1 since numbers start from 1
+        player.number = parseInt(numStr) + 1;
       }
     });
 
