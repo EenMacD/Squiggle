@@ -226,16 +226,17 @@ export class GameEngine {
           // Store initial position if not already stored
           if (!this.state.startPositions[player.id]) {
             this.state.startPositions[player.id] = {...player.position};
+            this.state.movementPaths[player.id] = [{ ...player.position }];
           }
-          // Record the path
-          if (!this.state.movementPaths[player.id]) {
-            this.state.movementPaths[player.id] = [];
-          }
+          // Update the path in real-time
           this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
           this.isDrawingPath = true;
+          // Keep player at start position during recording
+          player.position = this.state.startPositions[player.id];
+        } else {
+          // When not recording, just update player position
+          player.position = { x: constrainedX, y: constrainedY };
         }
-        // Always update player position while dragging
-        player.position = { x: constrainedX, y: constrainedY };
         this.render();
       }
     }
