@@ -238,7 +238,7 @@ export class GameEngine {
             this.state.startPositions[player.id] = {...player.position};
           }
           this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
-          // player.position = this.state.startPositions[player.id]; // Keep original position for now
+          player.position = this.state.startPositions[player.id]; // Keep original position for now
           this.isDrawingPath = true;
         } else {
           player.position = { x: constrainedX, y: constrainedY };
@@ -489,7 +489,7 @@ export class GameEngine {
       path.forEach(point => {
         this.ctx.lineTo(point.x, point.y);
       });
-      this.ctx.strokeStyle = 'rgba(0, 0, 255, 0.3)';
+      this.ctx.strokeStyle = 'black'; // Changed to black
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
     });
