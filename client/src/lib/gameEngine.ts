@@ -228,11 +228,11 @@ export class GameEngine {
             this.state.startPositions[player.id] = {...player.position};
             this.state.movementPaths[player.id] = [{ ...player.position }];
           }
-          // Update the path in real-time
+          // Update the path and player position in real-time
           this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
           this.isDrawingPath = true;
-          // Keep player at start position during recording
-          player.position = this.state.startPositions[player.id];
+          // Move player along with the path
+          player.position = { x: constrainedX, y: constrainedY };
         } else {
           // When not recording, just update player position
           player.position = { x: constrainedX, y: constrainedY };
