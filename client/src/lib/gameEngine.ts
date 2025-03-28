@@ -235,6 +235,10 @@ export class GameEngine {
             this.state.startPositions[player.id] = {...player.position};
           }
           this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
+          player.position = {...this.state.startPositions[player.id]};
+          this.isDrawingPath = true;
+        } else {
+          player.position = { x: constrainedX, y: constrainedY };
         }
         this.render();
       }
@@ -249,12 +253,18 @@ export class GameEngine {
       );
 
       if (receivingPlayer && receivingPlayer.team === 1) {
+        // Only allow red team to receive the ball
         this.state.ball.possessionPlayerId = receivingPlayer.id;
         this.state.ball.position = {
           x: receivingPlayer.position.x,
           y: receivingPlayer.position.y
         };
+
+        if (this.state.isRecording) {
+          this.recordKeyFrame();
+        }
       } else {
+        // Return ball to previous red team player
         const redPlayer = this.state.players.find(p => p.team === 1);
         if (redPlayer) {
           this.state.ball.possessionPlayerId = redPlayer.id;
@@ -269,14 +279,17 @@ export class GameEngine {
       this.state.isBallSelected = false;
     }
 
-    if (this.isDragging && this.state.selectedPlayer) {
+    if (this.isDragging && this.state.isRecording && this.isDrawingPath) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
-      if (player && this.state.startPositions[player.id]) {
-        player.position = {...this.state.startPositions[player.id]};
+      if (player && this.state.movementPaths[player.id]) {
+        const path = this.state.movementPaths[player.id];
+        const endPosition = path[path.length - 1];
+        player.position = this.state.startPositions[player.id];
       }
+      this.recordKeyFrame();
     }
-    
     this.isDragging = false;
+    this.isDrawingPath = false; // Reset path drawing flag
     this.render();
   }
 
@@ -311,7 +324,7 @@ export class GameEngine {
   public takeSnapshot() {
     if (!this.state.isRecording) return;
 
-    // Move players to their end positions
+    // Move players to their end positions before recording
     Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
       if (path.length > 0) {
         const player = this.state.players.find(p => p.id === playerId);
@@ -323,8 +336,6 @@ export class GameEngine {
     });
 
     this.recordKeyFrame();
-
-    // Clear paths after recording
     this.state.movementPaths = {};
     this.state.startPositions = {};
     this.render();
