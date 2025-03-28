@@ -69,8 +69,6 @@ app.use((req, res, next) => {
     log(`Attempting to start server on port ${PORT}...`);
 
     server.listen(PORT, "0.0.0.0", () => {
-      // Log the host and port for clarity
-      log(`Server is accessible at http://0.0.0.0:${PORT}`);
       log(`Server successfully started and listening on port ${PORT}`);
     });
 

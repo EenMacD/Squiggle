@@ -71,7 +71,14 @@ export function Canvas() {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (!gameEngine) return;
 
-      
+      if (e.code === 'Space' && gameEngine.isRecording()) {
+        e.preventDefault();
+        gameEngine.takeSnapshot();
+        toast({
+          title: "Snapshot taken",
+          description: "Player positions have been recorded"
+        });
+      }
 
       if (e.code === 'Enter' && tokenDialog.count > 0) {
         gameEngine.spawnTokens(tokenDialog.team, tokenDialog.count);

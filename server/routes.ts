@@ -24,13 +24,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const message = JSON.parse(data.toString());
 
         // Handle different message types
-        log(`WebSocket received message: ${message.type}`);
-        if (message.positions) {
-          log(`Path data received: ${JSON.stringify(message.positions)}`);
-        }
         switch (message.type) {
           case 'PLAY_START':
-            log(`Broadcasting play start: ${message.playId}`);
             // Broadcast play start to all clients
             wss.clients.forEach((client) => {
               if (client !== ws && client.readyState === WebSocket.OPEN) {
