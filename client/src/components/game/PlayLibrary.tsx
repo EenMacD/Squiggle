@@ -152,7 +152,7 @@ export function PlayLibrary({ folderId, onPlaySelect, onClose }: PlayLibraryProp
 
       // Start recording
       recorder.start();
-      engine.setPlaybackSpeed(1);
+      engine.setPlaybackSpeed(0.03); // Set to slow motion speed
       engine.startPlayback();
 
       // Stop recording when playback ends
