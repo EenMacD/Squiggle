@@ -121,8 +121,9 @@ export function PlaybackView({ play, onClose }: PlaybackViewProps) {
         frames.push(frameName);
       }
 
-      // Apply the correct playback speed
-      const speedFactor = 1 / playbackSpeed;
+      // Apply the correct playback speed.  The speed factor is inverted because FFmpeg's setpts expects a scaling factor.
+      const speedFactor = playbackSpeed === 0 ? 0.03 : 1 / playbackSpeed; //Handle 0 speed case
+
       await ffmpeg.exec([
         '-framerate', '30',
         '-pattern_type', 'sequence',
