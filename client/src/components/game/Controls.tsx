@@ -177,7 +177,7 @@ export function Controls({ gameEngine }: ControlsProps) {
           <>
             <Button
               variant={isPathMode ? "outline" : "default"}
-              size="lg"
+              size="sm"
               onClick={() => {
                 const newPathMode = gameEngine?.togglePathMode();
                 setIsPathMode(!!newPathMode);
@@ -186,7 +186,7 @@ export function Controls({ gameEngine }: ControlsProps) {
                   description: newPathMode ? "Click and drag players to record paths" : "Normal movement mode restored"
                 });
               }}
-              className="w-full"
+              className="absolute -top-8 -right-2"
             >
               {isPathMode ? "Disable Paths" : "Enable Paths"}
             </Button>
