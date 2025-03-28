@@ -258,6 +258,11 @@ export class GameEngine {
   }
 
   public stopDragging() {
+    const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
+    if (player && this.state.startPositions[player.id]) {
+      player.position = {...this.state.startPositions[player.id]};
+    }
+    
     if (this.state.isDraggingBall) {
       const receivingPlayer = this.findNearestPlayer(
         this.state.ball.position.x,
@@ -335,6 +340,17 @@ export class GameEngine {
 
   public takeSnapshot() {
     if (!this.state.isRecording) return;
+    
+    // Move players to their end positions
+    Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
+      if (path.length > 0) {
+        const player = this.state.players.find(p => p.id === playerId);
+        if (player) {
+          const endPosition = path[path.length - 1];
+          player.position = endPosition;
+        }
+      }
+    });
 
     this.recordKeyFrame();
     this.state.movementPaths = {};
@@ -489,7 +505,7 @@ export class GameEngine {
       path.forEach(point => {
         this.ctx.lineTo(point.x, point.y);
       });
-      this.ctx.strokeStyle = 'rgba(0, 0, 255, 0.3)';
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
     });
