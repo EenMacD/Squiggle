@@ -222,17 +222,20 @@ export class GameEngine {
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
-        // Store initial position if not already stored
-        if (!this.state.startPositions[player.id]) {
-          this.state.startPositions[player.id] = {...player.position};
+        if (this.state.isRecording) {
+          // Store initial position if not already stored
+          if (!this.state.startPositions[player.id]) {
+            this.state.startPositions[player.id] = {...player.position};
+          }
+          // Record the path
+          if (!this.state.movementPaths[player.id]) {
+            this.state.movementPaths[player.id] = [];
+          }
+          this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
+          this.isDrawingPath = true;
         }
-        // Always record the path
-        if (!this.state.movementPaths[player.id]) {
-          this.state.movementPaths[player.id] = [];
-        }
-        this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
-        // Keep player at start position while dragging
-        player.position = {...this.state.startPositions[player.id]};
+        // Always update player position while dragging
+        player.position = { x: constrainedX, y: constrainedY };
         this.render();
       }
     }
