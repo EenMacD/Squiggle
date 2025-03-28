@@ -25,6 +25,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Handle different message types
         log(`WebSocket received message: ${message.type}`);
+        if (message.positions) {
+          log(`Path data received: ${JSON.stringify(message.positions)}`);
+        }
         switch (message.type) {
           case 'PLAY_START':
             log(`Broadcasting play start: ${message.playId}`);
