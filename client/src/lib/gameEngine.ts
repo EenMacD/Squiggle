@@ -27,7 +27,9 @@ export interface GameState {
   ball: BallState;
   isDraggingBall: boolean;
   isBallSelected: boolean;
-  touchCount: number; // Added touchCount property
+  touchCount: number;
+  movementPaths: Record<string, Position[]>;
+  startPositions: Record<string, Position>;
 }
 
 export class GameEngine {
@@ -35,6 +37,7 @@ export class GameEngine {
   private ctx: CanvasRenderingContext2D;
   public state: GameState;
   private isDragging: boolean = false;
+  private isDrawingPath: boolean = false; // Added flag for path drawing
   private playbackInterval: number | null = null;
   private currentKeyFrameIndex: number = 0;
   private animationFrameId: number | null = null;
@@ -64,7 +67,9 @@ export class GameEngine {
       ball: initialBallState,
       isDraggingBall: false,
       isBallSelected: false,
-      touchCount: 0 // Initialize touchCount
+      touchCount: 0,
+      movementPaths: {},
+      startPositions: {}
     };
 
     this.render();
@@ -226,7 +231,18 @@ export class GameEngine {
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
-        player.position = { x: constrainedX, y: constrainedY };
+        if (this.state.isRecording) {
+          // Store the path
+          if (!this.state.movementPaths[player.id]) {
+            this.state.movementPaths[player.id] = [];
+            this.state.startPositions[player.id] = {...player.position};
+          }
+          this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
+          // player.position = this.state.startPositions[player.id]; // Keep original position for now
+          this.isDrawingPath = true;
+        } else {
+          player.position = { x: constrainedX, y: constrainedY };
+        }
 
         // If player has ball possession, move ball with player
         if (this.state.ball.possessionPlayerId === player.id) {
@@ -275,10 +291,17 @@ export class GameEngine {
       this.state.isBallSelected = false;
     }
 
-    if (this.isDragging && this.state.isRecording) {
+    if (this.isDragging && this.state.isRecording && this.isDrawingPath) {
+      const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
+      if (player && this.state.movementPaths[player.id]) {
+        const path = this.state.movementPaths[player.id];
+        const endPosition = path[path.length - 1];
+        player.position = this.state.startPositions[player.id];
+      }
       this.recordKeyFrame();
     }
     this.isDragging = false;
+    this.isDrawingPath = false; // Reset path drawing flag
     this.render();
   }
 
@@ -302,19 +325,34 @@ export class GameEngine {
 
   public toggleRecording(): boolean {
     this.state.isRecording = !this.state.isRecording;
-
     if (this.state.isRecording) {
       this.state.keyFrames = [];
+      this.state.movementPaths = {};
+      this.state.startPositions = {};
     }
-
     return this.state.isRecording;
   }
 
   public takeSnapshot() {
     if (!this.state.isRecording) return;
 
+    this.recordKeyFrame();
+    this.state.movementPaths = {};
+    this.state.startPositions = {};
+    this.render();
+  }
+
+
+  public recordKeyFrame() {
     const positions: Record<string, Position> = {};
     this.state.players.forEach(player => {
+      if (this.state.movementPaths[player.id]?.length > 0) {
+        // Use the end position from the path
+        const path = this.state.movementPaths[player.id];
+        player.position = path[path.length - 1];
+        delete this.state.movementPaths[player.id];
+        delete this.state.startPositions[player.id];
+      }
       positions[player.id] = { ...player.position };
     });
 
@@ -323,21 +361,7 @@ export class GameEngine {
       positions,
       ball: { ...this.state.ball }
     });
-  }
-
-
-  private recordKeyFrame() {
-    const positions: Record<string, Position> = {};
-    this.state.players.forEach(player => {
-      positions[player.id] = { ...player.position };
-    });
-
-    this.state.keyFrames.push({
-      timestamp: Date.now(),
-      positions,
-      ball: { ...this.state.ball },
-      touchCount: this.state.touchCount
-    });
+    this.render();
   }
 
   public getRecordedKeyFrames() {
@@ -390,16 +414,8 @@ export class GameEngine {
 
         // Only update frame if enough time has passed based on playback speed
         if (deltaTime >= (1000 / 60) / this.playbackSpeed) {
-          const frame = this.state.keyFrames[this.currentKeyFrameIndex];
-          Object.entries(frame.positions).forEach(([playerId, position]) => {
-            const player = this.state.players.find(p => p.id === playerId);
-            if (player) {
-              player.position = position;
-            }
-          });
-          this.state.ball = { ...frame.ball };
+          this.renderFrame(this.currentKeyFrameIndex);
           this.currentKeyFrameIndex++;
-          this.render();
           this.lastFrameTime = currentTime;
         }
 
@@ -423,45 +439,11 @@ export class GameEngine {
     this.pausePlayback();
     this.currentKeyFrameIndex = 0;
     if (this.state.keyFrames.length > 0) {
-      const firstFrame = this.state.keyFrames[0];
-      Object.entries(firstFrame.positions).forEach(([playerId, position]) => {
-        const player = this.state.players.find(p => p.id === playerId);
-        if (player) {
-          player.position = position;
-        }
-      });
-      this.state.ball = { ...firstFrame.ball };
-      this.render();
+      this.renderFrame(0);
     }
   }
 
-  public render() {
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Draw field background in white
-    this.ctx.fillStyle = '#FFFFFF';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // Sidelines in black
-    this.ctx.strokeStyle = 'black';
-    this.ctx.lineWidth = 2;
-
-    // Main field rectangle
-    this.ctx.strokeRect(
-      50 + this.SIDELINE_WIDTH,
-      50,
-      this.canvas.width - 100 - (this.SIDELINE_WIDTH * 2),
-      this.canvas.height - 100
-    );
-
-    // Center line
-    this.ctx.beginPath();
-    this.ctx.moveTo(50 + this.SIDELINE_WIDTH, this.canvas.height / 2);
-    this.ctx.lineTo(this.canvas.width - 50 - this.SIDELINE_WIDTH, this.canvas.height / 2);
-    this.ctx.stroke();
-
-    // Draw players
+  private drawPlayers() {
     this.state.players.forEach(player => {
       this.ctx.beginPath();
       this.ctx.arc(player.position.x, player.position.y, this.TOKEN_RADIUS, 0, Math.PI * 2);
@@ -494,7 +476,56 @@ export class GameEngine {
         this.ctx.fillText(player.number.toString(), player.position.x, numberY);
       }
     });
+  }
 
+  private drawPaths() {
+    if (!this.state.isRecording) return;
+
+    Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
+      if (path.length < 2) return;
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(path[0].x, path[0].y);
+      path.forEach(point => {
+        this.ctx.lineTo(point.x, point.y);
+      });
+      this.ctx.strokeStyle = 'rgba(0, 0, 255, 0.3)';
+      this.ctx.lineWidth = 2;
+      this.ctx.stroke();
+    });
+  }
+
+
+  public render() {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Draw paths first so they appear under players
+    this.drawPaths();
+
+    // Draw field background in white
+    this.ctx.fillStyle = '#FFFFFF';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Sidelines in black
+    this.ctx.strokeStyle = 'black';
+    this.ctx.lineWidth = 2;
+
+    // Main field rectangle
+    this.ctx.strokeRect(
+      50 + this.SIDELINE_WIDTH,
+      50,
+      this.canvas.width - 100 - (this.SIDELINE_WIDTH * 2),
+      this.canvas.height - 100
+    );
+
+    // Center line
+    this.ctx.beginPath();
+    this.ctx.moveTo(50 + this.SIDELINE_WIDTH, this.canvas.height / 2);
+    this.ctx.lineTo(this.canvas.width - 50 - this.SIDELINE_WIDTH, this.canvas.height / 2);
+    this.ctx.stroke();
+
+    this.drawPlayers();
     this.drawBall();
 
     //Add touch count display (replace with actual UI element placement)
@@ -504,7 +535,6 @@ export class GameEngine {
     this.ctx.textAlign = 'left';
     this.ctx.fillText(`Touch: ${this.state.touchCount}`, 20, 30);
     this.ctx.restore();
-
   }
 
   private drawBall() {
@@ -684,4 +714,44 @@ export class GameEngine {
       this.recordKeyFrame();
     }
   }
+
+  private handleMouseMove = (e: MouseEvent) => {
+    if (!this.isDragging || !this.state.selectedPlayer) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
+    if (player) {
+      if (this.state.isRecording) {
+        // Store the path
+        if (!this.state.movementPaths[player.id]) {
+          this.state.movementPaths[player.id] = [];
+          this.state.startPositions[player.id] = {...player.position};
+        }
+        this.state.movementPaths[player.id].push({ x, y });
+        player.position = this.state.startPositions[player.id];
+        this.isDrawingPath = true;
+      } else {
+        player.position = { x, y };
+      }
+      this.render();
+    }
+  };
+
+  private handleMouseUp = () => {
+    if (this.state.selectedPlayer && this.state.isRecording && this.isDrawingPath) {
+      const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
+      if (player && this.state.movementPaths[player.id]) {
+        const path = this.state.movementPaths[player.id];
+        const endPosition = path[path.length - 1];
+        player.position = this.state.startPositions[player.id];
+      }
+    }
+    this.isDragging = false;
+    this.state.selectedPlayer = null;
+    this.isDrawingPath = false;
+    this.render();
+  };
 }
