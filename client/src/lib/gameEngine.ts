@@ -220,9 +220,7 @@ export class GameEngine {
     const constrainedY = Math.max(fieldTop + this.TOKEN_RADIUS, Math.min(fieldBottom - this.TOKEN_RADIUS, y));
 
     if (this.state.isDraggingBall) {
-      // Allow ball to be dragged freely
       this.state.ball.position = { x: constrainedX, y: constrainedY };
-      // Release ball from player possession while dragging
       this.state.ball.possessionPlayerId = null;
       this.render();
       return;
@@ -232,26 +230,16 @@ export class GameEngine {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         if (this.state.isRecording) {
-          // Store the path
           if (!this.state.movementPaths[player.id]) {
             this.state.movementPaths[player.id] = [];
             this.state.startPositions[player.id] = {...player.position};
           }
           this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
-          // player.position = this.state.startPositions[player.id]; // Keep original position for now
+          player.position = {...this.state.startPositions[player.id]};
           this.isDrawingPath = true;
         } else {
           player.position = { x: constrainedX, y: constrainedY };
         }
-
-        // If player has ball possession, move ball with player
-        if (this.state.ball.possessionPlayerId === player.id) {
-          this.state.ball.position = {
-            x: player.position.x,
-            y: player.position.y
-          };
-        }
-
         this.render();
       }
     }
@@ -335,6 +323,17 @@ export class GameEngine {
 
   public takeSnapshot() {
     if (!this.state.isRecording) return;
+
+    // Move players to their end positions before recording
+    Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
+      if (path.length > 0) {
+        const player = this.state.players.find(p => p.id === playerId);
+        if (player) {
+          const endPosition = path[path.length - 1];
+          player.position = {...endPosition};
+        }
+      }
+    });
 
     this.recordKeyFrame();
     this.state.movementPaths = {};
@@ -489,7 +488,7 @@ export class GameEngine {
       path.forEach(point => {
         this.ctx.lineTo(point.x, point.y);
       });
-      this.ctx.strokeStyle = 'rgba(0, 0, 255, 0.3)';
+      this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
       this.ctx.lineWidth = 2;
       this.ctx.stroke();
     });
