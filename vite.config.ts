@@ -12,6 +12,12 @@ export default defineConfig({
     react(),
     runtimeErrorOverlay(),
     themePlugin(),
+  ],
+  server: {
+    host: "0.0.0.0",
+    hmr: {
+      host: "0.0.0.0",
+    },
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
