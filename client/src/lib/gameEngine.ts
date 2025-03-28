@@ -219,27 +219,20 @@ export class GameEngine {
     const constrainedX = Math.max(fieldLeft + this.TOKEN_RADIUS, Math.min(fieldRight - this.TOKEN_RADIUS, x));
     const constrainedY = Math.max(fieldTop + this.TOKEN_RADIUS, Math.min(fieldBottom - this.TOKEN_RADIUS, y));
 
-    if (this.state.isDraggingBall) {
-      this.state.ball.position = { x: constrainedX, y: constrainedY };
-      this.state.ball.possessionPlayerId = null;
-      this.render();
-      return;
-    }
-
     if (this.isDragging && this.state.selectedPlayer) {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
-        if (this.state.isRecording) {
-          if (!this.state.movementPaths[player.id]) {
-            this.state.movementPaths[player.id] = [];
-            this.state.startPositions[player.id] = {...player.position};
-          }
-          this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
-          player.position = {...this.state.startPositions[player.id]};
-          this.isDrawingPath = true;
-        } else {
-          player.position = { x: constrainedX, y: constrainedY };
+        // Store initial position if not already stored
+        if (!this.state.startPositions[player.id]) {
+          this.state.startPositions[player.id] = {...player.position};
         }
+        // Always record the path
+        if (!this.state.movementPaths[player.id]) {
+          this.state.movementPaths[player.id] = [];
+        }
+        this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
+        // Keep player at start position while dragging
+        player.position = {...this.state.startPositions[player.id]};
         this.render();
       }
     }
@@ -324,7 +317,7 @@ export class GameEngine {
   public takeSnapshot() {
     if (!this.state.isRecording) return;
 
-    // Move players to their end positions before recording
+    // Move players to their path end positions
     Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
       if (path.length > 0) {
         const player = this.state.players.find(p => p.id === playerId);
@@ -336,6 +329,8 @@ export class GameEngine {
     });
 
     this.recordKeyFrame();
+    
+    // Clear paths and start positions after recording
     this.state.movementPaths = {};
     this.state.startPositions = {};
     this.render();
@@ -478,8 +473,6 @@ export class GameEngine {
   }
 
   private drawPaths() {
-    if (!this.state.isRecording) return;
-
     Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
       if (path.length < 2) return;
 
