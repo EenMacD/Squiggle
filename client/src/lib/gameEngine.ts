@@ -232,14 +232,8 @@ export class GameEngine {
       const player = this.state.players.find(p => p.id === this.state.selectedPlayer);
       if (player) {
         if (this.state.isRecording) {
-          // Store the path
-          if (!this.state.movementPaths[player.id]) {
-            this.state.movementPaths[player.id] = [];
-            this.state.startPositions[player.id] = {...player.position};
-          }
-          this.state.movementPaths[player.id].push({ x: constrainedX, y: constrainedY });
-          player.position = this.state.startPositions[player.id]; // Keep original position for now
-          this.isDrawingPath = true;
+          // Just store final position
+          player.position = { x: constrainedX, y: constrainedY };
         } else {
           player.position = { x: constrainedX, y: constrainedY };
         }
@@ -479,20 +473,8 @@ export class GameEngine {
   }
 
   private drawPaths() {
-    if (!this.state.isRecording) return;
-
-    Object.entries(this.state.movementPaths).forEach(([playerId, path]) => {
-      if (path.length < 2) return;
-
-      this.ctx.beginPath();
-      this.ctx.moveTo(path[0].x, path[0].y);
-      path.forEach(point => {
-        this.ctx.lineTo(point.x, point.y);
-      });
-      this.ctx.strokeStyle = 'black'; // Changed to black
-      this.ctx.lineWidth = 2;
-      this.ctx.stroke();
-    });
+    // Paths disabled
+    return;
   }
 
 
