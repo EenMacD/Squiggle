@@ -65,7 +65,7 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const PORT = 5000;
+    const PORT = 4000;
     log(`Attempting to start server on port ${PORT}...`);
 
     server.listen(PORT, "0.0.0.0", () => {

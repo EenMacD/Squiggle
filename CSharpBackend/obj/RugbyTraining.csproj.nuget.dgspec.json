@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/home/runner/workspace/CSharpBackend/RugbyTraining.csproj": {}
+    "/Users/iainmcdulling/Projects/squiggle/RugbyTacticsSim/CSharpBackend/RugbyTraining.csproj": {}
   },
   "projects": {
-    "/home/runner/workspace/CSharpBackend/RugbyTraining.csproj": {
+    "/Users/iainmcdulling/Projects/squiggle/RugbyTacticsSim/CSharpBackend/RugbyTraining.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/runner/workspace/CSharpBackend/RugbyTraining.csproj",
+        "projectUniqueName": "/Users/iainmcdulling/Projects/squiggle/RugbyTacticsSim/CSharpBackend/RugbyTraining.csproj",
         "projectName": "RugbyTraining",
-        "projectPath": "/home/runner/workspace/CSharpBackend/RugbyTraining.csproj",
-        "packagesPath": "/home/runner/.nuget/packages/",
-        "outputPath": "/home/runner/workspace/CSharpBackend/obj/",
+        "projectPath": "/Users/iainmcdulling/Projects/squiggle/RugbyTacticsSim/CSharpBackend/RugbyTraining.csproj",
+        "packagesPath": "/Users/iainmcdulling/.nuget/packages/",
+        "outputPath": "/Users/iainmcdulling/Projects/squiggle/RugbyTacticsSim/CSharpBackend/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/runner/.nuget/NuGet/NuGet.Config"
+          "/Users/iainmcdulling/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net7.0"
@@ -32,6 +32,11 @@
           "warnAsError": [
             "NU1605"
           ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -62,6 +67,20 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.osx-x64",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -70,7 +89,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/nix/store/4k08ckhym1bcwnsk52j201a80l2xrkhp-dotnet-sdk-7.0.410/sdk/7.0.410/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.302/RuntimeIdentifierGraph.json"
         }
       }
     }
