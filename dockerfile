@@ -8,6 +8,7 @@ RUN apt-get update && \
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs
 
+
 # (Optional) Install PostgreSQL client utilities if needed for migrations
 RUN apt-get install -y postgresql-client
 
@@ -18,6 +19,9 @@ WORKDIR /app
 # Install Node dependencies and run database migrations
 RUN npm install
 RUN npm install dotenv
+RUN apt-get update && apt-get install -y bash && rm -rf /var/lib/apt/lists/*
+
+
 
 RUN npx drizzle-kit push
 
