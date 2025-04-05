@@ -1,0 +1,16 @@
+{
+    "apps": [
+      {
+        "name": "node-app",
+        "script": "npm",
+        "args": "run dev",
+        "cwd": "/app"
+      },
+      {
+        "name": "dotnet-app",
+        "script": "dotnet",
+        "args": "run",
+        "cwd": "/app/CSharpBackend"
+      }
+    ]
+  }

@@ -7,9 +7,9 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// Update API base URL to use port 3000 in development
+// Update API base URL to use port 5001 in development
 const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3000'
+  ? 'http://localhost:5001'
   : `${window.location.protocol}//${window.location.host}`;
 
 export async function apiRequest(
