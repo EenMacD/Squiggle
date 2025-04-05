@@ -5,3 +5,69 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+
+# Build Results
+bin/
+obj/
+Debug/
+Release/
+
+# Visual Studio specific
+*.user
+*.suo
+*.vssscc
+*.vspscc
+.vs/
+
+# Logs and Reports
+*.log
+TestResults/
+
+# NuGet Packages
+*.nupkg
+packages/
+*.snupkg
+
+# DotNetCore
+*.pidb
+*.csproj.user
+*.db
+*.cache
+
+# Resharper and Rider
+_ReSharper*/
+*.DotSettings.user
+*.sln.docstates
+
+# Azure and other publishing profiles
+PublishProfiles/
+*.publishsettings
+
+# Configuration Files
+appsettings.*.json
+secrets.json
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.old
+~$*
+
+# IDE/OS specific
+.DS_Store
+Thumbs.db
+
+# Coverlet Coverage Reports
+coverage.opencover.xml
+coverage.cobertura.xml
+
+# JetBrains Rider
+.idea/
+
+# Rider's workspace
+*.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/

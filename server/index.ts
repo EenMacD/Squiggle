@@ -8,10 +8,13 @@ app.use(express.urlencoded({ extended: false }));
 
 // Add CORS middleware for development
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') {
+  res.header('Access-Control-Allow-Credentials', 'true');  if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
@@ -65,7 +68,7 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const PORT = 5000;
+    const PORT = 8080;
     log(`Attempting to start server on port ${PORT}...`);
 
     server.listen(PORT, "0.0.0.0", () => {
