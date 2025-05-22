@@ -22,6 +22,9 @@ RUN npm install dotenv
 
 # Copy .NET project
 COPY ./CSharpBackend /app/CSharpBackend
+# clear cached folders
+RUN rm -rf /app/CSharpBackend/obj/ /app/CSharpBackend/bin/
+
 RUN dotnet restore /app/CSharpBackend
 
 # Copy the rest of the application

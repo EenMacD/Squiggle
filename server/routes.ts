@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const folders = await storage.getFolders();
       res.json(folders);
     } catch (error) {
-      log(`Error getting folders: ${error}`);
+      log(`Error getting folders: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to get folders" });
     }
   });
@@ -85,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const folder = await storage.createFolder(result.data);
       res.json(folder);
     } catch (error) {
-      log(`Error creating folder: ${error}`);
+      log(`Error creating folder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to create folder" });
     }
   });

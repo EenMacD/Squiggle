@@ -1,6 +1,7 @@
 import { plays, folders, type Play, type InsertPlay, type Folder, type InsertFolder } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
+import { log } from "./vite";
 
 export interface IStorage {
   // Folder operations
@@ -20,23 +21,44 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getFolders(): Promise<Folder[]> {
-    return await db
-      .select()
-      .from(folders)
-      .orderBy(desc(folders.createdAt));
+    try {
+      log('Attempting to get folders...');
+      const result = await db
+        .select()
+        .from(folders)
+        .orderBy(desc(folders.createdAt));
+      log(`Successfully retrieved ${result.length} folders`);
+      return result;
+    } catch (error) {
+      log(`Database error in getFolders: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      if (error instanceof Error) {
+        log(`Error stack: ${error.stack}`);
+      }
+      throw error;
+    }
   }
 
   async createFolder(insertFolder: InsertFolder): Promise<Folder> {
-    const now = new Date();
-    const [folder] = await db
-      .insert(folders)
-      .values({
-        name: insertFolder.name,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returning();
-    return folder;
+    try {
+      log(`Attempting to create folder with name: ${insertFolder.name}`);
+      const now = new Date();
+      const [folder] = await db
+        .insert(folders)
+        .values({
+          name: insertFolder.name,
+          createdAt: now,
+          updatedAt: now
+        })
+        .returning();
+      log(`Successfully created folder with ID: ${folder.id}`);
+      return folder;
+    } catch (error) {
+      log(`Database error in createFolder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      if (error instanceof Error) {
+        log(`Error stack: ${error.stack}`);
+      }
+      throw error;
+    }
   }
 
   async renameFolder(id: number, name: string): Promise<Folder> {
