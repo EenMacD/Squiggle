@@ -1,36 +1,56 @@
-import { plays, folders, type Play, type InsertPlay, type Folder, type InsertFolder } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
-import { log } from "./vite";
+import { ObjectId } from 'mongodb';
+import { foldersCollection, playsCollection } from './db'; // Assuming these are MongoDB collections
+import { 
+  Folder, 
+  Play, 
+  CreateFolderInput, 
+  CreatePlayInput,
+  UpdateFolderInput,
+  UpdatePlayFolderInput,
+  // The actual Zod schema types might be named like CreateFolder, CreatePlay if inferred directly
+  // For inputs, it's common to use a suffix like 'Input' or 'Payload' for clarity
+  // I'll assume the types from shared/schema.ts are named as ...Input for this refactoring
+} from '@shared/schema';
+import { log } from './vite'; // Assuming log is a generic logger
+
+// Helper to map MongoDB document to schema type (convert ObjectId _id to string)
+const mapMongoDoc = <T extends { _id: ObjectId | string }>(doc: any): T => {
+  if (doc && doc._id instanceof ObjectId) {
+    return { ...doc, _id: doc._id.toHexString() } as T;
+  }
+  return doc as T;
+};
+
+const mapMongoDocs = <T extends { _id: ObjectId | string }>(docs: any[]): T[] => {
+  return docs.map(doc => mapMongoDoc<T>(doc));
+};
 
 export interface IStorage {
   // Folder operations
   getFolders(): Promise<Folder[]>;
-  createFolder(folder: InsertFolder): Promise<Folder>;
-  deleteFolder(id: number): Promise<void>;
-  renameFolder(id: number, name: string): Promise<Folder>;
+  createFolder(folderData: CreateFolderInput): Promise<Folder>;
+  deleteFolder(id: string): Promise<void>;
+  renameFolder(id: string, folderData: UpdateFolderInput): Promise<Folder | null>;
 
   // Play operations
   getPlays(): Promise<Play[]>;
-  getPlaysByFolder(folderId: number): Promise<Play[]>;
+  getPlayById(id: string): Promise<Play | null>;
+  getPlaysByFolder(folderId: string): Promise<Play[]>;
   getPlaysByCategory(category: string): Promise<Play[]>;
-  createPlay(play: InsertPlay): Promise<Play>;
-  deletePlay(id: number): Promise<void>;
-  updatePlayFolder(playId: number, folderId: number | null): Promise<Play>;
+  createPlay(playData: CreatePlayInput): Promise<Play>;
+  deletePlay(id: string): Promise<void>;
+  updatePlayFolder(playId: string, folderData: UpdatePlayFolderInput): Promise<Play | null>;
 }
 
 export class DatabaseStorage implements IStorage {
   async getFolders(): Promise<Folder[]> {
     try {
-      log('Attempting to get folders...');
-      const result = await db
-        .select()
-        .from(folders)
-        .orderBy(desc(folders.createdAt));
+      log('Attempting to get folders from MongoDB...');
+      const result = await foldersCollection.find().sort({ createdAt: -1 }).toArray();
       log(`Successfully retrieved ${result.length} folders`);
-      return result;
+      return mapMongoDocs<Folder>(result);
     } catch (error) {
-      log(`Database error in getFolders: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      log(`MongoDB error in getFolders: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       if (error instanceof Error) {
         log(`Error stack: ${error.stack}`);
       }
@@ -38,22 +58,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createFolder(insertFolder: InsertFolder): Promise<Folder> {
+  async createFolder(folderData: CreateFolderInput): Promise<Folder> {
     try {
-      log(`Attempting to create folder with name: ${insertFolder.name}`);
+      log(`Attempting to create folder with name: ${folderData.name}`);
       const now = new Date();
-      const [folder] = await db
-        .insert(folders)
-        .values({
-          name: insertFolder.name,
-          createdAt: now,
-          updatedAt: now
-        })
-        .returning();
-      log(`Successfully created folder with ID: ${folder.id}`);
-      return folder;
+      const newFolderDocument = {
+        name: folderData.name,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const result = await foldersCollection.insertOne(newFolderDocument);
+      log(`Successfully created folder with ID: ${result.insertedId}`);
+      // Construct the Folder object to return, including the generated _id
+      return mapMongoDoc<Folder>({ ...newFolderDocument, _id: result.insertedId });
     } catch (error) {
-      log(`Database error in createFolder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+      log(`MongoDB error in createFolder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       if (error instanceof Error) {
         log(`Error stack: ${error.stack}`);
       }
@@ -61,86 +80,93 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async renameFolder(id: number, name: string): Promise<Folder> {
-    const [folder] = await db
-      .update(folders)
-      .set({ 
-        name,
-        updatedAt: new Date()
-      })
-      .where(eq(folders.id, id))
-      .returning();
-    return folder;
+  async renameFolder(id: string, folderData: UpdateFolderInput): Promise<Folder | null> {
+    if (!ObjectId.isValid(id)) {
+      log(`Invalid ObjectId format for ID: ${id} in renameFolder`);
+      return null; 
+    }
+    const result = await foldersCollection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { name: folderData.name, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+    return result ? mapMongoDoc<Folder>(result) : null;
   }
 
-  async deleteFolder(id: number): Promise<void> {
-    // First, update all plays in this folder to have no folder
-    await db
-      .update(plays)
-      .set({ folderId: null })
-      .where(eq(plays.folderId, id));
+  async deleteFolder(id: string): Promise<void> {
+    if (!ObjectId.isValid(id)) {
+      log(`Invalid ObjectId format for ID: ${id} in deleteFolder`);
+      return; 
+    }
+    // Update plays in this folder to have folderId: null (plays store folderId as string)
+    // This assumes plays store folderId as the string representation of the folder's ObjectId
+    await playsCollection.updateMany(
+      { folderId: id }, 
+      { $set: { folderId: null, updatedAt: new Date() } }
+    );
 
-    // Then delete the folder
-    await db
-      .delete(folders)
-      .where(eq(folders.id, id));
+    await foldersCollection.deleteOne({ _id: new ObjectId(id) });
   }
 
   async getPlays(): Promise<Play[]> {
-    return await db
-      .select()
-      .from(plays)
-      .orderBy(desc(plays.createdAt));
+    const result = await playsCollection.find().sort({ createdAt: -1 }).toArray();
+    return mapMongoDocs<Play>(result);
   }
 
-  async getPlaysByFolder(folderId: number): Promise<Play[]> {
-    return await db
-      .select()
-      .from(plays)
-      .where(eq(plays.folderId, folderId))
-      .orderBy(desc(plays.createdAt));
+  async getPlayById(id: string): Promise<Play | null> {
+    if (!ObjectId.isValid(id)) {
+      log(`Invalid ObjectId format for ID: ${id} in getPlayById`);
+      return null;
+    }
+    const result = await playsCollection.findOne({ _id: new ObjectId(id) });
+    return result ? mapMongoDoc<Play>(result) : null;
+  }
+
+  async getPlaysByFolder(folderId: string): Promise<Play[]> {
+    // Assuming folderId in plays collection is stored as a string (ObjectId.toHexString())
+    const result = await playsCollection.find({ folderId: folderId }).sort({ createdAt: -1 }).toArray();
+    return mapMongoDocs<Play>(result);
   }
 
   async getPlaysByCategory(category: string): Promise<Play[]> {
-    return await db
-      .select()
-      .from(plays)
-      .where(eq(plays.category, category))
-      .orderBy(desc(plays.createdAt));
+    const result = await playsCollection.find({ category: category }).sort({ createdAt: -1 }).toArray();
+    return mapMongoDocs<Play>(result);
   }
 
-  async createPlay(insertPlay: InsertPlay): Promise<Play> {
+  async createPlay(playData: CreatePlayInput): Promise<Play> {
     const now = new Date();
-    const [play] = await db
-      .insert(plays)
-      .values({
-        name: insertPlay.name,
-        category: insertPlay.category,
-        folderId: insertPlay.folderId,
-        keyframes: insertPlay.keyframes,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returning();
-    return play;
+    const newPlayDocument = {
+      name: playData.name,
+      category: playData.category,
+      folderId: playData.folderId || null, // Ensure it's null if undefined
+      keyframes: playData.keyframes,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const result = await playsCollection.insertOne(newPlayDocument);
+     return mapMongoDoc<Play>({ ...newPlayDocument, _id: result.insertedId });
   }
 
-  async deletePlay(id: number): Promise<void> {
-    await db
-      .delete(plays)
-      .where(eq(plays.id, id));
+  async deletePlay(id: string): Promise<void> {
+    if (!ObjectId.isValid(id)) {
+      log(`Invalid ObjectId format for ID: ${id} in deletePlay`);
+      return;
+    }
+    await playsCollection.deleteOne({ _id: new ObjectId(id) });
   }
 
-  async updatePlayFolder(playId: number, folderId: number | null): Promise<Play> {
-    const [play] = await db
-      .update(plays)
-      .set({ 
-        folderId,
-        updatedAt: new Date()
-      })
-      .where(eq(plays.id, playId))
-      .returning();
-    return play;
+  async updatePlayFolder(playId: string, folderData: UpdatePlayFolderInput): Promise<Play | null> {
+    if (!ObjectId.isValid(playId)) {
+      log(`Invalid ObjectId format for play ID: ${playId} in updatePlayFolder`);
+      return null;
+    }
+    // folderId in UpdatePlayFolderInput is string | null. This is what we want to set.
+    const result = await playsCollection.findOneAndUpdate(
+      { _id: new ObjectId(playId) },
+      { $set: { folderId: folderData.folderId, updatedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+    return result ? mapMongoDoc<Play>(result) : null;
   }
 }
 

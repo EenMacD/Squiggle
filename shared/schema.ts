@@ -1,5 +1,3 @@
-import { pgTable, text, serial, jsonb, integer, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Position schema for x,y coordinates
@@ -21,35 +19,75 @@ export const keyFrame = z.object({
   ball: ballState
 });
 
-// Database table for folders
-export const folders = pgTable("folders", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+// Schema for Folders collection in MongoDB
+export const folderSchema = z.object({
+  _id: z.string(), // In MongoDB, this will be an ObjectId string representation
+  name: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-// Database table for storing rugby plays
-export const plays = pgTable("plays", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  category: text("category").notNull(),
-  folderId: integer("folder_id").references(() => folders.id),
-  keyframes: jsonb("keyframes").notNull().$type<z.infer<typeof keyFrame>[]>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+// Schema for Folders collection in MongoDB (full document)
+export const folderSchema = z.object({
+  _id: z.string(), // In MongoDB, this will be an ObjectId string representation
+  name: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
-// Schema for inserting new folders
-export const insertFolderSchema = createInsertSchema(folders);
+// Schema for Plays collection in MongoDB (full document)
+export const playSchema = z.object({
+  _id: z.string(), // In MongoDB, this will be an ObjectId string representation
+  name: z.string(),
+  category: z.string(),
+  folderId: z.string().nullable(), // Reference to Folder's _id (ObjectId string representation), or null
+  keyframes: z.array(keyFrame),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
 
-// Schema for inserting new plays
-export const insertPlaySchema = createInsertSchema(plays);
+// --- Input Validation Schemas ---
 
-// Types for TypeScript
-export type InsertFolder = z.infer<typeof insertFolderSchema>;
-export type Folder = typeof folders.$inferSelect;
-export type InsertPlay = z.infer<typeof insertPlaySchema>;
-export type Play = typeof plays.$inferSelect;
+// Schema for creating a new folder
+export const createFolderSchema = z.object({
+  name: z.string().min(1, "Folder name cannot be empty"),
+});
+
+// Schema for creating a new play
+export const createPlaySchema = z.object({
+  name: z.string().min(1, "Play name cannot be empty"),
+  category: z.string().min(1, "Play category cannot be empty"),
+  folderId: z.string().optional(), // ObjectId string, optional. If undefined, play is not in a folder.
+  keyframes: z.array(keyFrame),
+});
+
+// Schema for updating a folder's name
+export const updateFolderSchema = z.object({
+  name: z.string().min(1, "Folder name cannot be empty"),
+});
+
+// Schema for updating a play's folder
+export const updatePlayFolderSchema = z.object({
+  folderId: z.string().nullable(), // ObjectId string, or null to remove from folder
+});
+
+
+// --- Inferred Types ---
+export type Folder = z.infer<typeof folderSchema>;
+export type Play = z.infer<typeof playSchema>;
 export type BallState = z.infer<typeof ballState>;
 export type KeyFrame = z.infer<typeof keyFrame>;
+
+// Types for input validation schemas (optional, but good practice)
+export type CreateFolderInput = z.infer<typeof createFolderSchema>;
+export type CreatePlayInput = z.infer<typeof createPlaySchema>;
+export type UpdateFolderInput = z.infer<typeof updateFolderSchema>;
+export type UpdatePlayFolderInput = z.infer<typeof updatePlayFolderSchema>;
+
+// Note: The main `folderSchema` and `playSchema` represent the shape of documents
+// retrieved from the database (including _id, createdAt, updatedAt).
+// The "create" and "update" schemas are for validating client input
+// before it's processed and before database-managed fields are added/updated.
+// `playSchema.folderId` is nullable to allow plays not associated with any folder.
+// `createPlaySchema.folderId` is optional: if not provided, the play is created without a folder.
+// `updatePlayFolderSchema.folderId` is nullable: can be set to a new folder's ID string or null to remove from folder.

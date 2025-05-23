@@ -8,21 +8,24 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      - mongo
     restart: unless-stopped
+    # The following environment variables are expected to be in the .env file
+    # MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017
+    # MONGO_DB_NAME: rugby_tactics
+    # MONGO_USER: admin
+    # MONGO_PASSWORD: secretpassword
 
-  db:
-    image: postgres:latest
+  mongo:
+    image: mongo:latest
     restart: always
     environment:
-      POSTGRES_USER: ${PGUSER}
-      POSTGRES_PASSWORD: ${PGPASSWORD}
-      POSTGRES_DB: ${PGDATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-
+      - mongodata:/data/db
 
 volumes:
-  pgdata:
+  mongodata:

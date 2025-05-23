@@ -2,8 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertPlaySchema, insertFolderSchema } from "@shared/schema";
-import { log } from "./vite";
+import { 
+  createFolderSchema, 
+  createPlaySchema, 
+  updateFolderSchema,
+  updatePlayFolderSchema 
+} from "@shared/schema";
+import { log } from "./vite"; // Assuming log is a generic logger
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -52,12 +57,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
         }
       } catch (error) {
-        log(`WebSocket message error: ${error}`);
+        log(`WebSocket message error: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
 
     ws.on('error', (error) => {
-      log(`WebSocket client error: ${error}`);
+      log(`WebSocket client error: ${error.message}`);
     });
 
     ws.on('close', () => {
@@ -78,12 +83,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/folders", async (req, res) => {
     try {
-      const result = insertFolderSchema.safeParse(req.body);
+      const result = createFolderSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ error: result.error });
+        return res.status(400).json({ error: result.error.flatten() });
       }
       const folder = await storage.createFolder(result.data);
-      res.json(folder);
+      res.status(201).json(folder);
     } catch (error) {
       log(`Error creating folder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to create folder" });
@@ -92,24 +97,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/folders/:id", async (req, res) => {
     try {
-      await storage.deleteFolder(Number(req.params.id));
+      const { id } = req.params;
+      await storage.deleteFolder(id);
       res.status(204).end();
     } catch (error) {
-      log(`Error deleting folder: ${error}`);
+      log(`Error deleting folder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to delete folder" });
     }
   });
 
   app.patch("/api/folders/:id", async (req, res) => {
     try {
-      const { name } = req.body;
-      if (!name?.trim()) {
-        return res.status(400).json({ error: "Folder name is required" });
+      const { id } = req.params;
+      const result = updateFolderSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.flatten() });
       }
-      const folder = await storage.renameFolder(Number(req.params.id), name.trim());
+      const folder = await storage.renameFolder(id, result.data);
+      if (!folder) {
+        return res.status(404).json({ error: "Folder not found or failed to update" });
+      }
       res.json(folder);
     } catch (error) {
-      log(`Error renaming folder: ${error}`);
+      log(`Error renaming folder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to rename folder" });
     }
   });
@@ -120,66 +130,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const plays = await storage.getPlays();
       res.json(plays);
     } catch (error) {
-      log(`Error getting plays: ${error}`);
+      log(`Error getting plays: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to get plays" });
     }
   });
 
   app.get("/api/plays/:id", async (req, res) => {
     try {
-      const plays = await storage.getPlays();
-      const play = plays.find(p => p.id === Number(req.params.id));
+      const { id } = req.params;
+      const play = await storage.getPlayById(id);
       if (!play) {
         return res.status(404).json({ error: "Play not found" });
       }
       res.json(play);
     } catch (error) {
-      log(`Error getting play: ${error}`);
+      log(`Error getting play by ID: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to get play" });
     }
   });
 
   app.get("/api/plays/category/:category", async (req, res) => {
     try {
-      const plays = await storage.getPlaysByCategory(req.params.category);
+      const { category } = req.params;
+      const plays = await storage.getPlaysByCategory(category);
       res.json(plays);
     } catch (error) {
-      log(`Error getting plays by category: ${error}`);
+      log(`Error getting plays by category: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to get plays by category" });
     }
   });
 
   app.post("/api/plays", async (req, res) => {
     try {
-      const result = insertPlaySchema.safeParse(req.body);
+      const result = createPlaySchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ error: result.error });
+        return res.status(400).json({ error: result.error.flatten() });
       }
       const play = await storage.createPlay(result.data);
-      res.json(play);
+      res.status(201).json(play);
     } catch (error) {
-      log(`Error creating play: ${error}`);
+      log(`Error creating play: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to create play" });
     }
   });
 
   app.patch("/api/plays/:id/folder", async (req, res) => {
     try {
-      const { folderId } = req.body;
-      const play = await storage.updatePlayFolder(Number(req.params.id), folderId);
+      const { id } = req.params;
+      const result = updatePlayFolderSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.flatten() });
+      }
+      const play = await storage.updatePlayFolder(id, result.data);
+      if (!play) {
+        return res.status(404).json({ error: "Play not found or failed to update" });
+      }
       res.json(play);
     } catch (error) {
-      log(`Error updating play folder: ${error}`);
+      log(`Error updating play folder: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to update play folder" });
     }
   });
 
   app.delete("/api/plays/:id", async (req, res) => {
     try {
-      await storage.deletePlay(Number(req.params.id));
+      const { id } = req.params;
+      await storage.deletePlay(id);
       res.status(204).end();
     } catch (error) {
-      log(`Error deleting play: ${error}`);
+      log(`Error deleting play: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       res.status(500).json({ error: "Failed to delete play" });
     }
   });

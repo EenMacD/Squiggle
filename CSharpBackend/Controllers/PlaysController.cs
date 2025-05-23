@@ -1,61 +1,92 @@
 using Microsoft.AspNetCore.Mvc;
-using Npgsql;
-using Dapper;
+using MongoDB.Driver;
+using MongoDB.Bson; 
 using RugbyTraining.Models;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+// Removed: using Microsoft.Extensions.Configuration;
+// Removed: using System; // If only used for InvalidOperationException related to config
 
-namespace RugbyTraining.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-public class PlaysController : ControllerBase
+namespace RugbyTraining.Controllers
 {
-    private readonly string _connectionString;
-
-    public PlaysController(IConfiguration configuration)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class PlaysController : ControllerBase
     {
-        _connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string not found.");
-    }
+        private readonly IMongoCollection<Play> _playsCollection;
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Play>>> GetPlays()
-    {
-        using var connection = new NpgsqlConnection(_connectionString);
-        var plays = await connection.QueryAsync<Play>("SELECT * FROM plays");
-        return Ok(plays);
-    }
+        public PlaysController(IMongoCollection<Play> playsCollection)
+        {
+            _playsCollection = playsCollection;
+        }
 
-    [HttpGet("category/{category}")]
-    public async Task<ActionResult<IEnumerable<Play>>> GetPlaysByCategory(string category)
-    {
-        using var connection = new NpgsqlConnection(_connectionString);
-        var plays = await connection.QueryAsync<Play>(
-            "SELECT * FROM plays WHERE category = @Category",
-            new { Category = category });
-        return Ok(plays);
-    }
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Play>>> GetPlays()
+        {
+            var plays = await _playsCollection.Find(Builders<Play>.Filter.Empty)
+                                              .SortByDescending(p => p.CreatedAt)
+                                              .ToListAsync();
+            return Ok(plays);
+        }
 
-    [HttpPost]
-    public async Task<ActionResult<Play>> CreatePlay(Play play)
-    {
-        using var connection = new NpgsqlConnection(_connectionString);
-        var id = await connection.QuerySingleAsync<int>(
-            @"INSERT INTO plays (name, category, movements) 
-              VALUES (@Name, @Category, @Movements::jsonb) 
-              RETURNING id",
-            play);
-        
-        play.Id = id;
-        return CreatedAtAction(nameof(GetPlays), new { id }, play);
-    }
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Play>> GetPlayById(string id)
+        {
+            if (!ObjectId.TryParse(id, out _))
+            {
+                return BadRequest("Invalid ID format.");
+            }
+            var filter = Builders<Play>.Filter.Eq(p => p.Id, id);
+            var play = await _playsCollection.Find(filter).FirstOrDefaultAsync();
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeletePlay(int id)
-    {
-        using var connection = new NpgsqlConnection(_connectionString);
-        await connection.ExecuteAsync(
-            "DELETE FROM plays WHERE id = @Id",
-            new { Id = id });
-        return NoContent();
+            if (play == null)
+            {
+                return NotFound();
+            }
+            return Ok(play);
+        }
+
+        [HttpGet("category/{category}")]
+        public async Task<ActionResult<IEnumerable<Play>>> GetPlaysByCategory(string category)
+        {
+            var filter = Builders<Play>.Filter.Eq(p => p.Category, category);
+            var plays = await _playsCollection.Find(filter)
+                                              .SortByDescending(p => p.CreatedAt)
+                                              .ToListAsync();
+            return Ok(plays);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<Play>> CreatePlay([FromBody] Play play)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            play.Id = ObjectId.GenerateNewId().ToString(); 
+            play.CreatedAt = System.DateTime.UtcNow; // Explicitly use System.DateTime
+            play.UpdatedAt = System.DateTime.UtcNow; // Explicitly use System.DateTime
+
+            await _playsCollection.InsertOneAsync(play);
+            return CreatedAtAction(nameof(GetPlayById), new { id = play.Id }, play);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePlay(string id)
+        {
+             if (!ObjectId.TryParse(id, out _))
+            {
+                return BadRequest("Invalid ID format.");
+            }
+            var filter = Builders<Play>.Filter.Eq(p => p.Id, id);
+            var result = await _playsCollection.DeleteOneAsync(filter);
+
+            if (result.DeletedCount == 0)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
     }
 }

@@ -4,8 +4,43 @@ using Microsoft.Extensions.Hosting;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using MongoDB.Driver; // Added for MongoDB
+using RugbyTraining.Models; // Added for Play model
+using Microsoft.Extensions.Configuration; // Added for IConfiguration
+using System; // Added for Environment
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure MongoDB Client, Database, and Collection
+var configuration = builder.Configuration;
+string mongoUri = Environment.GetEnvironmentVariable("MONGO_URI") 
+                  ?? configuration.GetConnectionString("MongoUri") 
+                  ?? "mongodb://localhost:27017"; // Ultimate fallback
+string dbName = Environment.GetEnvironmentVariable("MONGO_DB_NAME") 
+                ?? configuration.GetConnectionString("MongoDbName") 
+                ?? "rugby_tactics"; // Ultimate fallback
+
+if (string.IsNullOrEmpty(mongoUri)) 
+{
+    // Consider logging an error or throwing a more specific startup exception
+    throw new InvalidOperationException("MongoDB URI is not configured. Set MONGO_URI environment variable or ConnectionStrings:MongoUri in appsettings.json.");
+}
+if (string.IsNullOrEmpty(dbName))
+{
+     throw new InvalidOperationException("MongoDB Database Name is not configured. Set MONGO_DB_NAME environment variable or ConnectionStrings:MongoDbName in appsettings.json.");
+}
+
+builder.Services.AddSingleton<IMongoClient>(sp => new MongoClient(mongoUri));
+builder.Services.AddScoped<IMongoDatabase>(sp => 
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    return client.GetDatabase(dbName);
+});
+builder.Services.AddScoped<IMongoCollection<Play>>(sp =>
+{
+    var database = sp.GetRequiredService<IMongoDatabase>();
+    return database.GetCollection<Play>("plays"); // "plays" is the collection name
+});
 
 // Add services to the container
 builder.Services.AddControllers();
